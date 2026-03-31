@@ -1,5 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { evaluateNewBadges, MemberStatsSnapshot } from "../badges";
+
+const DEEP_CLEAN_ROOM_POINTS = 5;
 
 export const completeRoom = onCall(async (request) => {
   if (!request.auth) {
@@ -21,7 +24,6 @@ export const completeRoom = onCall(async (request) => {
   const db = getFirestore();
   const uid = request.auth.uid;
 
-  // Verify membership
   const house = await db.collection("houses").doc(houseId).get();
   if (!house.exists) {
     throw new HttpsError("not-found", "House not found");
@@ -32,6 +34,7 @@ export const completeRoom = onCall(async (request) => {
   }
 
   const cleanRef = db.collection(`houses/${houseId}/deepCleans`).doc(cleanId);
+  const memberRef = db.collection(`houses/${houseId}/members`).doc(uid);
 
   await db.runTransaction(async (tx) => {
     const cleanDoc = await tx.get(cleanRef);
@@ -59,10 +62,16 @@ export const completeRoom = onCall(async (request) => {
       [`assignments.${roomName}.completedAt`]: Timestamp.now(),
     });
 
+    // Award points and increment deepCleanRoomsCompleted
+    tx.update(memberRef, {
+      "stats.totalPoints": FieldValue.increment(DEEP_CLEAN_ROOM_POINTS),
+      "stats.deepCleanRoomsCompleted": FieldValue.increment(1),
+    });
+
     // Check if ALL rooms are now completed
     const allCompleted = Object.entries(assignments).every(
       ([name, room]: [string, any]) => {
-        if (name === roomName) return true; // this one is being completed now
+        if (name === roomName) return true;
         return room.completed === true;
       }
     );
@@ -71,6 +80,25 @@ export const completeRoom = onCall(async (request) => {
       tx.update(cleanRef, { status: "completed" });
     }
   });
+
+  // Badge evaluation (after transaction, read fresh stats)
+  const memberDoc = await memberRef.get();
+  if (memberDoc.exists) {
+    const memberData = memberDoc.data()!;
+    const stats: MemberStatsSnapshot = {
+      totalPoints: memberData.stats?.totalPoints || 0,
+      issuesResolved: memberData.stats?.issuesResolved || 0,
+      longestStreak: memberData.stats?.longestStreak || 0,
+      deepCleanRoomsCompleted: memberData.stats?.deepCleanRoomsCompleted || 0,
+      badges: memberData.stats?.badges || [],
+    };
+    const newBadges = evaluateNewBadges(stats);
+    if (newBadges.length > 0) {
+      await memberRef.update({
+        "stats.badges": FieldValue.arrayUnion(...newBadges),
+      });
+    }
+  }
 
   return { success: true };
 });
