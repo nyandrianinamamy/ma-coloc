@@ -36,7 +36,7 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
   }
 
   void _post() {
-    context.go('/home');
+    context.pop();
   }
 
   @override
