@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -131,9 +129,10 @@ class IssueActions extends Notifier<AsyncValue<void>> {
       _db.collection('houses/$houseId/issues');
 
   Future<String?> _uploadPhoto(String path, XFile photo) async {
-    final ref = _storage.ref(path);
-    await ref.putFile(File(photo.path));
-    return ref.getDownloadURL();
+    final storageRef = _storage.ref(path);
+    final bytes = await photo.readAsBytes();
+    await storageRef.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+    return storageRef.getDownloadURL();
   }
 
   /// Creates a new issue and returns its Firestore document ID.

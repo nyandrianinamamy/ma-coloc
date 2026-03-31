@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+import '../../../firebase_options.dart';
+import '../../mock/mock_data.dart';
 import '../../models/issue.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/house_provider.dart';
@@ -95,21 +98,91 @@ class IssueDetailScreen extends ConsumerWidget {
   // Build
   // ---------------------------------------------------------------------------
 
+  /// Converts a [MockIssue] to an [Issue] for placeholder mode.
+  static Issue? _mockIssueById(String id) {
+    final match = MockData.issues.where((m) => m.id == id).toList();
+    if (match.isEmpty) return null;
+    final m = match.first;
+    IssueType type;
+    switch (m.type.toLowerCase()) {
+      case 'grocery':
+        type = IssueType.grocery;
+      case 'repair':
+        type = IssueType.repair;
+      case 'other':
+        type = IssueType.other;
+      default:
+        type = IssueType.chore;
+    }
+    IssueStatus status;
+    switch (m.status.toLowerCase()) {
+      case 'in-progress':
+        status = IssueStatus.inProgress;
+      case 'resolved':
+        status = IssueStatus.resolved;
+      case 'disputed':
+        status = IssueStatus.disputed;
+      case 'closed':
+        status = IssueStatus.closed;
+      default:
+        status = IssueStatus.open;
+    }
+    return Issue(
+      id: m.id,
+      type: type,
+      title: m.title,
+      description: m.description,
+      photoUrl: m.photoUrl,
+      createdBy: m.authorId,
+      assignedTo: m.assigneeId,
+      anonymous: false,
+      createdAt: Timestamp.fromDate(m.createdAt),
+      status: status,
+      points: Issue.pointsForType(type),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final houseId = ref.watch(currentHouseIdProvider).valueOrNull;
-    final currentUid = ref.watch(authStateProvider).valueOrNull?.uid;
+    final isPlaceholder =
+        kDebugMode && DefaultFirebaseOptions.isPlaceholder;
 
-    if (houseId == null) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () => context.pop(),
+    final String houseId;
+    final String? currentUid;
+    Issue? issue;
+
+    if (isPlaceholder) {
+      houseId = 'placeholder';
+      currentUid = null;
+      issue = _mockIssueById(issueId);
+    } else {
+      final houseIdValue =
+          ref.watch(currentHouseIdProvider).valueOrNull;
+      currentUid = ref.watch(authStateProvider).valueOrNull?.uid;
+
+      if (houseIdValue == null) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.chevron_left),
+              onPressed: () => context.pop(),
+            ),
           ),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      }
+      houseId = houseIdValue;
+    }
+
+    if (isPlaceholder) {
+      return _buildDetail(
+        context,
+        ref,
+        issue: issue,
+        houseId: houseId,
+        currentUid: currentUid,
+        isPlaceholder: true,
       );
     }
 
@@ -136,120 +209,144 @@ class IssueDetailScreen extends ConsumerWidget {
         ),
         body: Center(child: Text('Error: $e')),
       ),
-      data: (issue) {
-        if (issue == null) {
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () => context.pop(),
-              ),
-            ),
-            body: const Center(child: Text('Issue not found')),
-          );
-        }
+      data: (loadedIssue) => _buildDetail(
+        context,
+        ref,
+        issue: loadedIssue,
+        houseId: houseId,
+        currentUid: currentUid,
+        isPlaceholder: false,
+      ),
+    );
+  }
 
-        final status = _statusConfig(issue.status);
-        final typeColor = _typeColor(issue.type);
-        final typeIcon = _typeIcon(issue.type);
+  Widget _buildDetail(
+    BuildContext context,
+    WidgetRef ref, {
+    required Issue? issue,
+    required String houseId,
+    required String? currentUid,
+    required bool isPlaceholder,
+  }) {
+    if (issue == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: const Center(child: Text('Issue not found')),
+      );
+    }
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          extendBodyBehindAppBar: true,
-          body: Stack(
-            children: [
-              // Scrollable content
-              CustomScrollView(
-                slivers: [
-                  // ----------------------------------------------------------------
-                  // Photo Header
-                  // ----------------------------------------------------------------
-                  SliverToBoxAdapter(
-                    child: _PhotoHeader(
-                      issue: issue,
-                      typeColor: typeColor,
-                      typeIcon: typeIcon,
-                      status: status,
-                      onBack: () => context.pop(),
-                    ),
-                  ),
+    final status = _statusConfig(issue.status);
+    final typeColor = _typeColor(issue.type);
+    final typeIcon = _typeIcon(issue.type);
 
-                  // ----------------------------------------------------------------
-                  // Content
-                  // ----------------------------------------------------------------
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        // Author / Assignee card
-                        _AuthorAssigneeCard(
-                          createdBy: issue.createdBy,
-                          anonymous: issue.anonymous,
-                          assignedTo: issue.assignedTo,
-                          createdAt: issue.createdAt,
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Description
-                        const _SectionLabel(label: 'DESCRIPTION'),
-                        const SizedBox(height: 8),
-                        _DescriptionCard(
-                          description: issue.description ?? '—',
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Timeline
-                        const _SectionLabel(label: 'TIMELINE'),
-                        const SizedBox(height: 8),
-                        _TimelineSection(issue: issue),
-                      ]),
-                    ),
-                  ),
-                ],
-              ),
-
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      extendBodyBehindAppBar: true,
+      body: Stack(
+        children: [
+          // Scrollable content
+          CustomScrollView(
+            slivers: [
               // ----------------------------------------------------------------
-              // Bottom action bar (fixed)
+              // Photo Header
               // ----------------------------------------------------------------
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _BottomActionBar(
+              SliverToBoxAdapter(
+                child: _PhotoHeader(
                   issue: issue,
-                  currentUid: currentUid,
-                  onClaim: () {
-                    ref
-                        .read(issueActionsProvider.notifier)
-                        .claim(houseId: houseId, issueId: issueId);
-                  },
-                  onResolve: () => _showResolveSheet(
-                    context,
-                    ref,
-                    houseId: houseId,
-                    issueId: issueId,
-                  ),
-                  onDispute: () => _showDisputeDialog(
-                    context,
-                    ref,
-                    houseId: houseId,
-                    issueId: issueId,
-                    issue: issue,
-                  ),
-                  onReact: () {
-                    ref.read(issueActionsProvider.notifier).react(
-                          houseId: houseId,
-                          issueId: issueId,
-                          emoji: '👏',
-                        );
-                  },
+                  typeColor: typeColor,
+                  typeIcon: typeIcon,
+                  status: status,
+                  onBack: () => context.pop(),
+                ),
+              ),
+
+              // ----------------------------------------------------------------
+              // Content
+              // ----------------------------------------------------------------
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // Author / Assignee card
+                    _AuthorAssigneeCard(
+                      createdBy: issue.createdBy,
+                      anonymous: issue.anonymous,
+                      assignedTo: issue.assignedTo,
+                      createdAt: issue.createdAt,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Description
+                    const _SectionLabel(label: 'DESCRIPTION'),
+                    const SizedBox(height: 8),
+                    _DescriptionCard(
+                      description: issue.description ?? '—',
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Timeline
+                    const _SectionLabel(label: 'TIMELINE'),
+                    const SizedBox(height: 8),
+                    _TimelineSection(issue: issue),
+                  ]),
                 ),
               ),
             ],
           ),
-        );
-      },
+
+          // ----------------------------------------------------------------
+          // Bottom action bar (fixed)
+          // ----------------------------------------------------------------
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _BottomActionBar(
+              issue: issue,
+              currentUid: currentUid,
+              onClaim: isPlaceholder
+                  ? () {}
+                  : () {
+                      ref
+                          .read(issueActionsProvider.notifier)
+                          .claim(houseId: houseId, issueId: issueId);
+                    },
+              onResolve: isPlaceholder
+                  ? () {}
+                  : () => _showResolveSheet(
+                        context,
+                        ref,
+                        houseId: houseId,
+                        issueId: issueId,
+                      ),
+              onDispute: isPlaceholder
+                  ? () {}
+                  : () => _showDisputeDialog(
+                        context,
+                        ref,
+                        houseId: houseId,
+                        issueId: issueId,
+                        issue: issue,
+                      ),
+              onReact: isPlaceholder
+                  ? () {}
+                  : () {
+                      ref.read(issueActionsProvider.notifier).react(
+                            houseId: houseId,
+                            issueId: issueId,
+                            emoji: '👏',
+                          );
+                    },
+            ),
+          ),
+        ],
+      ),
     );
   }
 

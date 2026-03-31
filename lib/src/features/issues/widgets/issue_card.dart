@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+import '../../../../firebase_options.dart';
 import '../../../models/issue.dart';
 import '../../../providers/issue_provider.dart';
 import '../../../theme/app_theme.dart';
@@ -208,12 +210,15 @@ class IssueCard extends ConsumerWidget {
                         issue.assignedTo != null
                             ? const _AssignedBadge()
                             : GestureDetector(
-                                onTap: () => ref
-                                    .read(issueActionsProvider.notifier)
-                                    .claim(
-                                      houseId: houseId,
-                                      issueId: issue.id,
-                                    ),
+                                onTap: (kDebugMode &&
+                                        DefaultFirebaseOptions.isPlaceholder)
+                                    ? null
+                                    : () => ref
+                                        .read(issueActionsProvider.notifier)
+                                        .claim(
+                                          houseId: houseId,
+                                          issueId: issue.id,
+                                        ),
                                 child: const _ClaimButton(),
                               ),
                       ],

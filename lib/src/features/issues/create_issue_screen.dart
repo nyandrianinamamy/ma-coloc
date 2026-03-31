@@ -1,10 +1,10 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../firebase_options.dart';
 import '../../models/issue.dart';
 import '../../providers/house_provider.dart';
 import '../../providers/issue_provider.dart';
@@ -48,6 +48,12 @@ class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
   }
 
   Future<void> _post() async {
+    // In placeholder mode, skip Firestore write
+    if (kDebugMode && DefaultFirebaseOptions.isPlaceholder) {
+      if (mounted) context.pop();
+      return;
+    }
+
     final houseId = ref.read(currentHouseIdProvider).valueOrNull;
     if (houseId == null) return;
 
@@ -479,9 +485,18 @@ class _PhotoPreview extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
               child: photo != null
-                  ? Image.file(
-                      File(photo!.path),
-                      fit: BoxFit.cover,
+                  ? FutureBuilder<Uint8List>(
+                      future: photo!.readAsBytes(),
+                      builder: (context, snap) {
+                        if (!snap.hasData) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        return Image.memory(snap.data!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity);
+                      },
                     )
                   : Container(
                       decoration: const BoxDecoration(

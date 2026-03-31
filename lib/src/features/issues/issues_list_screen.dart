@@ -1,6 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../firebase_options.dart';
+import '../../mock/mock_data.dart';
 import '../../models/issue.dart';
 import '../../providers/house_provider.dart';
 import '../../providers/issue_provider.dart';
@@ -55,20 +59,105 @@ class _IssuesListScreenState extends ConsumerState<IssuesListScreen> {
     super.dispose();
   }
 
+  /// Converts a [MockIssue] to an [Issue] for placeholder mode display.
+  static Issue _mockToIssue(MockIssue m) {
+    IssueType type;
+    switch (m.type.toLowerCase()) {
+      case 'grocery':
+        type = IssueType.grocery;
+      case 'repair':
+        type = IssueType.repair;
+      case 'other':
+        type = IssueType.other;
+      default:
+        type = IssueType.chore;
+    }
+    IssueStatus status;
+    switch (m.status.toLowerCase()) {
+      case 'in-progress':
+        type = type; // no-op to avoid fall-through warning
+        status = IssueStatus.inProgress;
+      case 'resolved':
+        status = IssueStatus.resolved;
+      case 'disputed':
+        status = IssueStatus.disputed;
+      case 'closed':
+        status = IssueStatus.closed;
+      default:
+        status = IssueStatus.open;
+    }
+    return Issue(
+      id: m.id,
+      type: type,
+      title: m.title,
+      description: m.description,
+      photoUrl: m.photoUrl,
+      createdBy: m.authorId,
+      assignedTo: m.assigneeId,
+      anonymous: false,
+      createdAt: Timestamp.fromDate(m.createdAt),
+      status: status,
+      points: Issue.pointsForType(type),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final houseId = ref.watch(currentHouseIdProvider).valueOrNull;
+    final isPlaceholder =
+        kDebugMode && DefaultFirebaseOptions.isPlaceholder;
 
-    if (houseId == null) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator()),
-      );
+    final String effectiveHouseId;
+    List<Issue>? placeholderIssues;
+
+    if (isPlaceholder) {
+      effectiveHouseId = 'placeholder';
+      placeholderIssues =
+          MockData.issues.map(_mockToIssue).toList();
+    } else {
+      final houseId = ref.watch(currentHouseIdProvider).valueOrNull;
+      if (houseId == null) {
+        return const Scaffold(
+          backgroundColor: AppColors.background,
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+      effectiveHouseId = houseId;
     }
 
-    final issuesAsync = ref.watch(
-      issuesStreamProvider(IssueQueryParams(houseId: houseId, tab: _issueTab)),
-    );
+    // In real mode, watch the stream
+    final AsyncValue<List<Issue>>? issuesAsync = isPlaceholder
+        ? null
+        : ref.watch(issuesStreamProvider(
+            IssueQueryParams(houseId: effectiveHouseId, tab: _issueTab)));
+
+    // Resolve the issue list to display
+    List<Widget> issueSliver() {
+      final List<Issue> raw =
+          isPlaceholder ? placeholderIssues! : [];
+
+      if (!isPlaceholder) {
+        return issuesAsync!.when(
+          loading: () => [
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ],
+          error: (e, _) => [
+            SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  'Error loading issues',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            ),
+          ],
+          data: (issues) => _buildIssueList(issues, effectiveHouseId),
+        );
+      }
+
+      return _buildIssueList(raw, effectiveHouseId);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -104,56 +193,39 @@ class _IssuesListScreenState extends ConsumerState<IssuesListScreen> {
           ),
 
           // Issue list or loading/error/empty state
-          ...issuesAsync.when(
-            loading: () => [
-              const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ],
-            error: (e, _) => [
-              SliverFillRemaining(
-                child: Center(
-                  child: Text(
-                    'Error loading issues',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                ),
-              ),
-            ],
-            data: (issues) {
-              final filtered = filterBySearch(
-                filterByType(issues, _activeTypeFilter),
-                _searchQuery,
-              );
-
-              if (filtered.isEmpty) {
-                return [
-                  const SliverFillRemaining(child: _EmptyState()),
-                ];
-              }
-
-              return [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: IssueCard(
-                          issue: filtered[index],
-                          houseId: houseId,
-                        ),
-                      ),
-                      childCount: filtered.length,
-                    ),
-                  ),
-                ),
-              ];
-            },
-          ),
+          ...issueSliver(),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildIssueList(List<Issue> issues, String houseId) {
+    final filtered = filterBySearch(
+      filterByType(issues, _activeTypeFilter),
+      _searchQuery,
+    );
+
+    if (filtered.isEmpty) {
+      return [const SliverFillRemaining(child: _EmptyState())];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: IssueCard(
+                issue: filtered[index],
+                houseId: houseId,
+              ),
+            ),
+            childCount: filtered.length,
+          ),
+        ),
+      ),
+    ];
   }
 }
 
