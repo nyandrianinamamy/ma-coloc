@@ -1,35 +1,45 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-import '../../../mock/mock_data.dart';
+import '../../../../firebase_options.dart';
+import '../../../models/issue.dart';
+import '../../../providers/issue_provider.dart';
 import '../../../theme/app_theme.dart';
 
-class IssueCard extends StatelessWidget {
-  const IssueCard({super.key, required this.issue});
+class IssueCard extends ConsumerWidget {
+  const IssueCard({super.key, required this.issue, required this.houseId});
 
-  final MockIssue issue;
+  final Issue issue;
+  final String houseId;
 
   // Type-based placeholder color
   Color _typeColor() {
-    switch (issue.type.toLowerCase()) {
-      case 'chore':
+    switch (issue.type) {
+      case IssueType.chore:
         return AppColors.orange;
-      case 'grocery':
+      case IssueType.grocery:
         return AppColors.emerald;
-      case 'repair':
+      case IssueType.repair:
         return AppColors.blue;
-      case 'other':
+      case IssueType.other:
         return AppColors.indigo;
-      default:
-        return AppColors.slate400;
     }
   }
 
   // Status badge config
-  ({Color bg, Color border, Color text, Color icon, IconData iconData, String label}) _statusConfig() {
+  ({
+    Color bg,
+    Color border,
+    Color text,
+    Color icon,
+    IconData iconData,
+    String label
+  }) _statusConfig() {
     switch (issue.status) {
-      case 'open':
+      case IssueStatus.open:
         return (
           bg: AppColors.orange50,
           border: AppColors.orange300,
@@ -38,7 +48,7 @@ class IssueCard extends StatelessWidget {
           iconData: Icons.radio_button_unchecked,
           label: 'OPEN',
         );
-      case 'in-progress':
+      case IssueStatus.inProgress:
         return (
           bg: AppColors.blue50,
           border: AppColors.blue100,
@@ -47,7 +57,7 @@ class IssueCard extends StatelessWidget {
           iconData: Icons.autorenew,
           label: 'IN PROGRESS',
         );
-      case 'resolved':
+      case IssueStatus.resolved:
         return (
           bg: AppColors.emerald50,
           border: AppColors.emerald100,
@@ -56,7 +66,7 @@ class IssueCard extends StatelessWidget {
           iconData: Icons.check_circle_outline,
           label: 'RESOLVED',
         );
-      case 'disputed':
+      case IssueStatus.disputed:
         return (
           bg: AppColors.rose50,
           border: AppColors.rose100,
@@ -65,26 +75,24 @@ class IssueCard extends StatelessWidget {
           iconData: Icons.chat_bubble_outline,
           label: 'DISPUTED',
         );
-      default:
+      case IssueStatus.closed:
         return (
           bg: AppColors.slate100,
           border: AppColors.slate200,
           text: AppColors.slate500,
           icon: AppColors.slate400,
-          iconData: Icons.help_outline,
-          label: issue.status.toUpperCase(),
+          iconData: Icons.lock_outline,
+          label: 'CLOSED',
         );
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = _statusConfig();
     final typeColor = _typeColor();
-    final assignee = issue.assigneeId != null
-        ? MockData.userById(issue.assigneeId!)
-        : null;
-    final timeStr = timeago.format(issue.createdAt);
+    final timeStr = timeago.format(issue.createdAt.toDate());
+    final displayTitle = issue.title ?? issue.type.name;
 
     return GestureDetector(
       onTap: () => context.push('/issues/${issue.id}'),
@@ -106,20 +114,23 @@ class IssueCard extends StatelessWidget {
           children: [
             // Left 1/3: Photo thumbnail
             ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
+              borderRadius:
+                  const BorderRadius.horizontal(left: Radius.circular(24)),
               child: SizedBox(
                 width: 106,
                 height: 128,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Placeholder colored by type (photoUrl is null in mock data)
+                    // Placeholder colored by type
                     issue.photoUrl != null
                         ? Image.network(
                             issue.photoUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _TypePlaceholder(color: typeColor, type: issue.type),
+                            errorBuilder: (_, __, ___) => _TypePlaceholder(
+                              color: typeColor,
+                              type: issue.type,
+                            ),
                           )
                         : _TypePlaceholder(color: typeColor, type: issue.type),
                     // Type badge overlay (top-left)
@@ -134,7 +145,7 @@ class IssueCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          issue.type.toUpperCase(),
+                          issue.type.name.toUpperCase(),
                           style: const TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
@@ -162,7 +173,7 @@ class IssueCard extends StatelessWidget {
 
                     // Title
                     Text(
-                      issue.title,
+                      displayTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -195,10 +206,21 @@ class IssueCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        // Assignee avatar or Claim button
-                        assignee != null
-                            ? _AssigneeAvatar(user: assignee)
-                            : _ClaimButton(),
+                        // Assignee badge or Claim button
+                        issue.assignedTo != null
+                            ? const _AssignedBadge()
+                            : GestureDetector(
+                                onTap: (kDebugMode &&
+                                        DefaultFirebaseOptions.isPlaceholder)
+                                    ? null
+                                    : () => ref
+                                        .read(issueActionsProvider.notifier)
+                                        .claim(
+                                          houseId: houseId,
+                                          issueId: issue.id,
+                                        ),
+                                child: const _ClaimButton(),
+                              ),
                       ],
                     ),
                   ],
@@ -219,20 +241,18 @@ class _TypePlaceholder extends StatelessWidget {
   const _TypePlaceholder({required this.color, required this.type});
 
   final Color color;
-  final String type;
+  final IssueType type;
 
   IconData get _icon {
-    switch (type.toLowerCase()) {
-      case 'chore':
+    switch (type) {
+      case IssueType.chore:
         return Icons.cleaning_services_outlined;
-      case 'grocery':
+      case IssueType.grocery:
         return Icons.shopping_cart_outlined;
-      case 'repair':
+      case IssueType.repair:
         return Icons.build_outlined;
-      case 'other':
+      case IssueType.other:
         return Icons.category_outlined;
-      default:
-        return Icons.help_outline;
     }
   }
 
@@ -296,31 +316,24 @@ class _StatusBadge extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Assignee avatar
+// Assigned badge — green circle with person icon (no members provider yet)
 // ---------------------------------------------------------------------------
-class _AssigneeAvatar extends StatelessWidget {
-  const _AssigneeAvatar({required this.user});
-
-  final MockUser user;
+class _AssignedBadge extends StatelessWidget {
+  const _AssignedBadge();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 24,
       height: 24,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
+        color: AppColors.emerald,
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.border, width: 1.5),
       ),
-      child: ClipOval(
-        child: Image.network(
-          user.avatarUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: AppColors.slate200,
-            child: const Icon(Icons.person, size: 14, color: AppColors.slate400),
-          ),
-        ),
+      child: const Icon(
+        Icons.person,
+        size: 14,
+        color: Colors.white,
       ),
     );
   }

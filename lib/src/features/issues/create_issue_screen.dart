@@ -1,25 +1,34 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
-import '../../mock/mock_data.dart';
+import '../../../firebase_options.dart';
+import '../../models/issue.dart';
+import '../../providers/house_provider.dart';
+import '../../providers/issue_provider.dart';
 import '../../theme/app_theme.dart';
 
 // ---------------------------------------------------------------------------
 // CreateIssueScreen — two-phase: camera view → details form
 // ---------------------------------------------------------------------------
 
-class CreateIssueScreen extends StatefulWidget {
+class CreateIssueScreen extends ConsumerStatefulWidget {
   const CreateIssueScreen({super.key});
 
   @override
-  State<CreateIssueScreen> createState() => _CreateIssueScreenState();
+  ConsumerState<CreateIssueScreen> createState() => _CreateIssueScreenState();
 }
 
-class _CreateIssueScreenState extends State<CreateIssueScreen> {
+class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
   bool _showDetails = false;
   String _selectedType = 'Chore';
   bool _isAnonymous = false;
   final TextEditingController _titleController = TextEditingController();
+
+  XFile? _photo;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -27,38 +36,81 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
     super.dispose();
   }
 
-  void _capture() {
-    setState(() => _showDetails = true);
+  void _onPhotoPicked(XFile photo) {
+    setState(() {
+      _photo = photo;
+      _showDetails = true;
+    });
   }
 
   void _retake() {
     setState(() => _showDetails = false);
   }
 
-  void _post() {
-    context.pop();
+  Future<void> _post() async {
+    // In placeholder mode, skip Firestore write
+    if (kDebugMode && DefaultFirebaseOptions.isPlaceholder) {
+      if (mounted) context.pop();
+      return;
+    }
+
+    final houseId = ref.read(currentHouseIdProvider).valueOrNull;
+    if (houseId == null) return;
+
+    setState(() => _isSubmitting = true);
+    try {
+      await ref.read(issueActionsProvider.notifier).create(
+            houseId: houseId,
+            type: IssueType.values.firstWhere(
+              (t) => t.name == _selectedType.toLowerCase(),
+              orElse: () => IssueType.chore,
+            ),
+            title:
+                _titleController.text.isNotEmpty ? _titleController.text : null,
+            anonymous: _isAnonymous,
+            photo: _photo,
+          );
+      if (mounted) context.pop();
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      child: _showDetails
-          ? _DetailsForm(
-              key: const ValueKey('details'),
-              selectedType: _selectedType,
-              isAnonymous: _isAnonymous,
-              titleController: _titleController,
-              onTypeChanged: (t) => setState(() => _selectedType = t),
-              onAnonymousChanged: (v) => setState(() => _isAnonymous = v),
-              onRetake: _retake,
-              onPost: _post,
-            )
-          : _CameraView(
-              key: const ValueKey('camera'),
-              onClose: () => context.pop(),
-              onCapture: _capture,
+    return Stack(
+      children: [
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _showDetails
+              ? _DetailsForm(
+                  key: const ValueKey('details'),
+                  selectedType: _selectedType,
+                  isAnonymous: _isAnonymous,
+                  titleController: _titleController,
+                  photo: _photo,
+                  isSubmitting: _isSubmitting,
+                  onTypeChanged: (t) => setState(() => _selectedType = t),
+                  onAnonymousChanged: (v) => setState(() => _isAnonymous = v),
+                  onRetake: _retake,
+                  onPost: _post,
+                )
+              : _CameraView(
+                  key: const ValueKey('camera'),
+                  onClose: () => context.pop(),
+                  onPhotoPicked: _onPhotoPicked,
+                ),
+        ),
+        if (_isSubmitting)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.4),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
             ),
+          ),
+      ],
     );
   }
 }
@@ -71,11 +123,22 @@ class _CameraView extends StatelessWidget {
   const _CameraView({
     super.key,
     required this.onClose,
-    required this.onCapture,
+    required this.onPhotoPicked,
   });
 
   final VoidCallback onClose;
-  final VoidCallback onCapture;
+  final ValueChanged<XFile> onPhotoPicked;
+
+  Future<void> _pickImage(ImageSource source) async {
+    final photo = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
+    if (photo != null) {
+      onPhotoPicked(photo);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +207,8 @@ class _CameraView extends StatelessWidget {
               left: 0,
               right: 0,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   children: [
                     // Close button
@@ -166,7 +230,7 @@ class _CameraView extends StatelessWidget {
                     ),
                     const Spacer(),
                     // "NEW ISSUE" label
-                    Text(
+                    const Text(
                       'NEW ISSUE',
                       style: TextStyle(
                         color: Colors.white,
@@ -196,7 +260,7 @@ class _CameraView extends StatelessWidget {
                   children: [
                     // Gallery button
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () => _pickImage(ImageSource.gallery),
                       child: Container(
                         width: 52,
                         height: 52,
@@ -217,7 +281,7 @@ class _CameraView extends StatelessWidget {
 
                     // Capture button
                     GestureDetector(
-                      onTap: onCapture,
+                      onTap: () => _pickImage(ImageSource.camera),
                       child: Container(
                         width: 80,
                         height: 80,
@@ -279,6 +343,8 @@ class _DetailsForm extends StatelessWidget {
     required this.selectedType,
     required this.isAnonymous,
     required this.titleController,
+    required this.photo,
+    required this.isSubmitting,
     required this.onTypeChanged,
     required this.onAnonymousChanged,
     required this.onRetake,
@@ -288,6 +354,8 @@ class _DetailsForm extends StatelessWidget {
   final String selectedType;
   final bool isAnonymous;
   final TextEditingController titleController;
+  final XFile? photo;
+  final bool isSubmitting;
   final ValueChanged<String> onTypeChanged;
   final ValueChanged<bool> onAnonymousChanged;
   final VoidCallback onRetake;
@@ -295,8 +363,6 @@ class _DetailsForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authorName = MockData.currentUser.name;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -308,13 +374,15 @@ class _DetailsForm extends StatelessWidget {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: onRetake,
-                    child: const Text(
+                    onTap: isSubmitting ? null : onRetake,
+                    child: Text(
                       'Retake',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.slate500,
+                        color: isSubmitting
+                            ? AppColors.slate500.withValues(alpha: 0.4)
+                            : AppColors.slate500,
                       ),
                     ),
                   ),
@@ -329,13 +397,15 @@ class _DetailsForm extends StatelessWidget {
                   ),
                   const Spacer(),
                   GestureDetector(
-                    onTap: onPost,
-                    child: const Text(
+                    onTap: isSubmitting ? null : onPost,
+                    child: Text(
                       'Post',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.emerald,
+                        color: isSubmitting
+                            ? AppColors.emerald.withValues(alpha: 0.4)
+                            : AppColors.emerald,
                       ),
                     ),
                   ),
@@ -353,7 +423,7 @@ class _DetailsForm extends StatelessWidget {
                     // Photo preview
                     _PhotoPreview(
                       isAnonymous: isAnonymous,
-                      authorName: authorName,
+                      photo: photo,
                     ),
                     const SizedBox(height: 24),
 
@@ -376,7 +446,10 @@ class _DetailsForm extends StatelessWidget {
                     const SizedBox(height: 28),
 
                     // Post button
-                    _PostButton(onPost: onPost),
+                    _PostButton(
+                      onPost: onPost,
+                      isSubmitting: isSubmitting,
+                    ),
                   ],
                 ),
               ),
@@ -395,11 +468,11 @@ class _DetailsForm extends StatelessWidget {
 class _PhotoPreview extends StatelessWidget {
   const _PhotoPreview({
     required this.isAnonymous,
-    required this.authorName,
+    required this.photo,
   });
 
   final bool isAnonymous;
-  final String authorName;
+  final XFile? photo;
 
   @override
   Widget build(BuildContext context) {
@@ -407,22 +480,40 @@ class _PhotoPreview extends StatelessWidget {
       aspectRatio: 4 / 3,
       child: Stack(
         children: [
-          // Placeholder colored background
-          Container(
-            decoration: BoxDecoration(
+          // Photo or placeholder background
+          Positioned.fill(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1E293B), Color(0xFF334155)],
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.camera_alt_outlined,
-                color: Colors.white.withValues(alpha: 0.3),
-                size: 48,
-              ),
+              child: photo != null
+                  ? FutureBuilder<Uint8List>(
+                      future: photo!.readAsBytes(),
+                      builder: (context, snap) {
+                        if (!snap.hasData) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        return Image.memory(snap.data!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity);
+                      },
+                    )
+                  : Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF1E293B), Color(0xFF334155)],
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.camera_alt_outlined,
+                          color: Colors.white.withValues(alpha: 0.3),
+                          size: 48,
+                        ),
+                      ),
+                    ),
             ),
           ),
 
@@ -431,7 +522,8 @@ class _PhotoPreview extends StatelessWidget {
             bottom: 12,
             right: 12,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(20),
@@ -446,7 +538,7 @@ class _PhotoPreview extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    isAnonymous ? 'Anonymous' : authorName,
+                    isAnonymous ? 'Anonymous' : 'You',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
@@ -617,9 +709,9 @@ class _TitleInputState extends State<_TitleInput> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
-            const Text(
+            Text(
               'Quick Title',
               style: TextStyle(
                 fontSize: 13,
@@ -628,8 +720,8 @@ class _TitleInputState extends State<_TitleInput> {
                 letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(width: 6),
-            const Text(
+            SizedBox(width: 6),
+            Text(
               '(Optional)',
               style: TextStyle(
                 fontSize: 12,
@@ -739,9 +831,9 @@ class _AnonymousToggle extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                const Text(
                   "Don't show your name",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary,
@@ -770,9 +862,13 @@ class _AnonymousToggle extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _PostButton extends StatelessWidget {
-  const _PostButton({required this.onPost});
+  const _PostButton({
+    required this.onPost,
+    required this.isSubmitting,
+  });
 
   final VoidCallback onPost;
+  final bool isSubmitting;
 
   @override
   Widget build(BuildContext context) {
@@ -791,8 +887,17 @@ class _PostButton extends StatelessWidget {
           ],
         ),
         child: ElevatedButton.icon(
-          onPressed: onPost,
-          icon: const Icon(Icons.send_rounded, size: 18),
+          onPressed: isSubmitting ? null : onPost,
+          icon: isSubmitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.send_rounded, size: 18),
           label: const Text(
             'Post to House',
             style: TextStyle(
@@ -803,6 +908,8 @@ class _PostButton extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.emerald,
             foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.emerald.withValues(alpha: 0.6),
+            disabledForegroundColor: Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
