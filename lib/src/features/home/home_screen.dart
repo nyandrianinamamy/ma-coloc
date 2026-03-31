@@ -556,40 +556,41 @@ class _ActivityItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Timeline column
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 0, 0),
-            child: Column(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _dotColor.withValues(alpha: 0.12),
-                  ),
-                  child: Icon(_dotIcon, color: _dotColor, size: 18),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: AppColors.slate200,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/issues/${activity.issue.id}'),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Timeline column
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 0, 0),
+              child: Column(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _dotColor.withValues(alpha: 0.12),
                     ),
+                    child: Icon(_dotIcon, color: _dotColor, size: 18),
                   ),
-              ],
+                  if (!isLast)
+                    Expanded(
+                      child: Container(
+                        width: 2,
+                        color: AppColors.slate200,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          // Card
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 16, 12),
-              child: GestureDetector(
-                onTap: () => context.push('/issues/${activity.issue.id}'),
+            // Card
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 16, 12),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -597,76 +598,76 @@ class _ActivityItem extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.border),
                   ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textPrimary,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textPrimary,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: activity.user.name.split(' ').first,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary),
+                                  ),
+                                  TextSpan(
+                                    text: _verb,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w400,
+                                        color: AppColors.textSecondary),
+                                  ),
+                                  TextSpan(
+                                    text: '"${activity.issue.title}"',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary),
+                                  ),
+                                ],
                               ),
-                              children: [
-                                TextSpan(
-                                  text: activity.user.name.split(' ').first,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary),
-                                ),
-                                TextSpan(
-                                  text: _verb,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColors.textSecondary),
-                                ),
-                                TextSpan(
-                                  text: '"${activity.issue.title}"',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary),
-                                ),
-                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          activity.time,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textTertiary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          ],
                         ),
-                        if (_points > 0) ...[
-                          const SizedBox(height: 4),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
                           Text(
-                            '+$_points pts',
+                            activity.time,
                             style: const TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.emerald,
+                              color: AppColors.textTertiary,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
+                          if (_points > 0) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '+$_points pts',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.emerald,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
