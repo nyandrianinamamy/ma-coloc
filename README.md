@@ -8,6 +8,7 @@ Gamified household management app for apartment-sharing. Track chores, manage de
 - **State Management:** Riverpod
 - **Routing:** GoRouter with auth-aware redirect
 - **Backend:** Firebase (Auth, Firestore, Cloud Functions v2, Storage)
+- **Design System:** Custom theme (AppColors, Google Fonts Inter)
 - **Data Models:** freezed + json_serializable
 - **Cloud Functions:** TypeScript
 
@@ -28,10 +29,31 @@ macoloc/
 │       │   ├── issue.dart           # Issue, IssueType, IssueStatus
 │       │   ├── deep_clean.dart      # DeepClean, VolunteerIntent, RoomAssignment
 │       │   └── leaderboard_entry.dart
+│       ├── mock/
+│       │   └── mock_data.dart       # Hardcoded mock data for UI development
+│       ├── theme/
+│       │   └── app_theme.dart       # AppColors, AppTheme.light (slate, emerald, orange)
 │       ├── providers/
 │       │   ├── auth_provider.dart   # FirebaseAuth state + sign-in/up/out
 │       │   └── house_provider.dart  # House membership query + create/join/leave
 │       └── features/
+│           ├── shell/
+│           │   └── mobile_shell.dart    # Bottom nav (Home, Issues, Ranks, Profile) + FAB
+│           ├── home/
+│           │   └── home_screen.dart     # Presence toggle, who's around, momentum, activity feed
+│           ├── issues/
+│           │   ├── issues_list_screen.dart   # Search, tabs, filters, issue cards
+│           │   ├── create_issue_screen.dart  # Camera view + detail form
+│           │   ├── issue_detail_screen.dart  # Photo header, timeline, action bar
+│           │   └── widgets/issue_card.dart   # Reusable issue card component
+│           ├── leaderboard/
+│           │   └── leaderboard_screen.dart   # Podium, weekly/monthly toggle, rankings
+│           ├── profile/
+│           │   └── profile_screen.dart       # Stats grid, badges
+│           ├── settings/
+│           │   └── settings_screen.dart      # House info, invite code, members
+│           ├── deep_clean/
+│           │   └── deep_clean_screen.dart    # Progress bar, room assignments
 │           └── onboarding/          # Sign-in, house choice, create, join, invite code
 ├── functions/
 │   └── src/
@@ -101,7 +123,7 @@ flutter run -d chrome --release
 ### Run tests
 
 ```bash
-flutter test                    # 26 unit tests
+flutter test                    # 26 tests (models, providers)
 flutter analyze                 # Static analysis
 cd functions && npm run build   # TypeScript check
 ```
@@ -122,6 +144,23 @@ dart run build_runner build --delete-conflicting-outputs
 4. Run tests to verify
 
 ## Architecture
+
+### Navigation
+
+GoRouter with `StatefulShellRoute.indexedStack` for bottom tab navigation:
+
+```
+/home          → Home (presence, activity feed)
+/issues        → Issues list (search, filter, tabs)
+/leaderboard   → Leaderboard (podium, rankings)
+/profile       → Profile (stats, badges)
+/create        → Create Issue (camera + form, pushes over shell)
+/issues/:id    → Issue Detail (pushes over shell)
+/settings      → Settings (pushes over shell)
+/clean         → Deep Clean (pushes over shell)
+```
+
+Dev auth bypass: when `kDebugMode && DefaultFirebaseOptions.isPlaceholder`, the router skips auth redirect and loads screens with mock data.
 
 ### Auth Flow
 
@@ -156,12 +195,14 @@ Single-house enforcement: callables reject if user already belongs to a house.
 
 | Sprint | Scope | Status |
 |--------|-------|--------|
-| 1 | Foundation: scaffold, models, auth, onboarding | Done |
-| 2 | Issue system: CRUD, lifecycle, photo capture | Planned |
-| 3 | Cloud Functions: auto-close, presence reset, deep clean | Planned |
-| 4 | Gamification: points, badges, streaks, leaderboard | Planned |
-| 5 | Home dashboard, presence toggle, activity feed | Planned |
-| 6 | House settings, deep clean UI, notifications | Planned |
+| 1 | Foundation: scaffold, models, Firebase auth, onboarding, Cloud Functions | Done |
+| 2 | UI Shell: all 9 screens with mock data, bottom nav, GoRouter, design system | Done |
+| 3 | Issue system: Firestore CRUD, photo upload, real-time streams, issue lifecycle | Planned |
+| 4 | Cloud Functions: auto-close, presence reset, deep clean scheduling | Planned |
+| 5 | Gamification: points engine, badges, streaks, live leaderboard | Planned |
+| 6 | Polish: notifications, presence toggle, settings mutations, onboarding → shell | Planned |
+
+> **Note:** Sprint 2 built all UI screens (Home, Issues, Create Issue, Issue Detail, Leaderboard, Profile, Settings, Deep Clean) against hardcoded mock data. Sprints 3–6 progressively wire real data and backend logic behind these screens.
 
 ## CI
 
