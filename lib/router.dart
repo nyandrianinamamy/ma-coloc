@@ -7,6 +7,7 @@ import 'src/features/onboarding/sign_in_screen.dart';
 import 'src/features/onboarding/house_choice_screen.dart';
 import 'src/features/onboarding/create_house_screen.dart';
 import 'src/features/onboarding/join_house_screen.dart';
+import 'src/features/onboarding/house_created_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -52,6 +53,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'join',
             builder: (context, state) => const JoinHouseScreen(),
+          ),
+          GoRoute(
+            path: 'created',
+            builder: (context, state) => const HouseCreatedScreen(),
           ),
         ],
       ),
