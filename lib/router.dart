@@ -14,6 +14,7 @@ import 'src/features/shell/mobile_shell.dart';
 import 'src/features/home/home_screen.dart';
 import 'src/features/issues/issues_list_screen.dart';
 import 'src/features/issues/create_issue_screen.dart';
+import 'src/features/issues/issue_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -133,8 +134,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/issues/:id',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Issue Detail — Coming Soon')),
+        builder: (context, state) => IssueDetailScreen(
+          issueId: state.pathParameters['id']!,
         ),
       ),
       GoRoute(
