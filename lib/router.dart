@@ -16,6 +16,7 @@ import 'src/features/issues/issues_list_screen.dart';
 import 'src/features/issues/create_issue_screen.dart';
 import 'src/features/issues/issue_detail_screen.dart';
 import 'src/features/leaderboard/leaderboard_screen.dart';
+import 'src/features/profile/profile_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -115,9 +116,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/profile',
-                builder: (context, state) => const Scaffold(
-                  body: Center(child: Text('Profile — Coming Soon')),
-                ),
+                builder: (context, state) => const ProfileScreen(),
               ),
             ],
           ),
