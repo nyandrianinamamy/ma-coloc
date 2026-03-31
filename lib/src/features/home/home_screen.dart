@@ -1,23 +1,105 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../firebase_options.dart';
 import '../../mock/mock_data.dart';
+import '../../models/member.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/house_provider.dart';
+import '../../providers/member_provider.dart';
 import '../../theme/app_theme.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // Used only in placeholder/mock mode
   bool _isHome = true;
 
   @override
   Widget build(BuildContext context) {
+    final isPlaceholder = kDebugMode && DefaultFirebaseOptions.isPlaceholder;
+    if (isPlaceholder) return _buildWithMockData(context);
+
+    final houseIdAsync = ref.watch(currentHouseIdProvider);
+    final houseId = houseIdAsync.valueOrNull;
+
+    if (houseId == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final house = ref.watch(currentHouseProvider).valueOrNull;
+    final membersAsync = ref.watch(membersStreamProvider(houseId));
+    final currentUid = ref.watch(authStateProvider).valueOrNull?.uid;
+
+    return membersAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: Text('Error: $e')),
+      ),
+      data: (members) {
+        final currentMemberList =
+            members.where((m) => m.uid == currentUid).toList();
+        final isHome = currentMemberList.isNotEmpty &&
+            currentMemberList.first.presence == Presence.home;
+        final homeMembers =
+            members.where((m) => m.presence == Presence.home).toList();
+
+        return _buildScaffold(
+          context: context,
+          houseName: house?.name ?? 'My House',
+          memberCount: members.length,
+          isHome: isHome,
+          onPresenceChanged: (value) {
+            ref.read(presenceActionsProvider.notifier).togglePresence(
+                  houseId: houseId,
+                  newPresence: value ? Presence.home : Presence.away,
+                );
+          },
+          whosAround: _LiveWhosAround(
+            members: members,
+            homeCount: homeMembers.length,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWithMockData(BuildContext context) {
     final homeUsers =
         MockData.users.where((u) => u.presence == 'home').toList();
+
+    return _buildScaffold(
+      context: context,
+      houseName: 'The Treehouse',
+      memberCount: MockData.users.length,
+      isHome: _isHome,
+      onPresenceChanged: (v) => setState(() => _isHome = v),
+      whosAround: _MockWhosAround(homeCount: homeUsers.length),
+    );
+  }
+
+  Widget _buildScaffold({
+    required BuildContext context,
+    required String houseName,
+    required int memberCount,
+    required bool isHome,
+    required ValueChanged<bool> onPresenceChanged,
+    required Widget whosAround,
+  }) {
     final activities = MockData.activities;
 
     return Scaffold(
@@ -29,8 +111,11 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
-                boxShadow: [BoxShadow(color: Color(0x0A000000), blurRadius: 8)],
+                borderRadius:
+                    BorderRadius.vertical(bottom: Radius.circular(40)),
+                boxShadow: [
+                  BoxShadow(color: Color(0x0A000000), blurRadius: 8)
+                ],
               ),
               child: SafeArea(
                 bottom: false,
@@ -40,70 +125,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Title row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'The Treehouse',
-                                style: Theme.of(context).textTheme.headlineSmall,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '6 Roommates',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(color: AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.slate100,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.notifications_outlined,
-                                  color: AppColors.slate700,
-                                  size: 24,
-                                ),
-                              ),
-                              Positioned(
-                                top: 12,
-                                right: 12,
-                                child: Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.orange,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.slate100, width: 2),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      _TitleRow(
+                        houseName: houseName,
+                        memberCount: memberCount,
                       ),
                       const SizedBox(height: 24),
 
                       // Presence toggle
                       _PresenceToggle(
-                        isHome: _isHome,
-                        onChanged: (v) => setState(() => _isHome = v),
+                        isHome: isHome,
+                        onChanged: onPresenceChanged,
                       ),
                       const SizedBox(height: 24),
 
                       // Who's around
-                      _WhosAround(homeCount: homeUsers.length),
+                      whosAround,
                     ],
                   ),
                 ),
@@ -128,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     'Recent Activity',
                     style: TextStyle(
                       fontSize: 18,
@@ -136,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppColors.slate800,
                     ),
                   ),
-                  Text(
+                  const Text(
                     'View all',
                     style: TextStyle(
                       fontSize: 14,
@@ -149,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Activity feed
+          // Activity feed (stays mock)
           SliverPadding(
             padding: const EdgeInsets.only(top: 16),
             sliver: SliverList(
@@ -165,6 +201,73 @@ class _HomeScreenState extends State<HomeScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Title Row
+// ---------------------------------------------------------------------------
+class _TitleRow extends StatelessWidget {
+  const _TitleRow({required this.houseName, required this.memberCount});
+
+  final String houseName;
+  final int memberCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              houseName,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$memberCount ${memberCount == 1 ? 'Roommate' : 'Roommates'}',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                color: AppColors.slate100,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.notifications_outlined,
+                color: AppColors.slate700,
+                size: 24,
+              ),
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: AppColors.orange,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.slate100, width: 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -227,8 +330,9 @@ class _PresenceToggle extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color:
-                            isHome ? AppColors.emerald : AppColors.textSecondary,
+                        color: isHome
+                            ? AppColors.emerald
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -244,8 +348,9 @@ class _PresenceToggle extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color:
-                            !isHome ? AppColors.orange : AppColors.textSecondary,
+                        color: !isHome
+                            ? AppColors.orange
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -260,10 +365,156 @@ class _PresenceToggle extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Who's Around
+// Who's Around — Live (Firestore)
 // ---------------------------------------------------------------------------
-class _WhosAround extends StatelessWidget {
-  const _WhosAround({required this.homeCount});
+class _LiveWhosAround extends StatelessWidget {
+  const _LiveWhosAround({
+    required this.members,
+    required this.homeCount,
+  });
+
+  final List<Member> members;
+  final int homeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "Who's around?",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.slate800,
+              ),
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.emerald100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$homeCount Home',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.emerald,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 90,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: members.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, index) {
+              return _LiveAvatarItem(member: members[index]);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LiveAvatarItem extends StatelessWidget {
+  const _LiveAvatarItem({required this.member});
+
+  final Member member;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAtHome = member.presence == Presence.home;
+    return Opacity(
+      opacity: isAtHome ? 1.0 : 0.5,
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isAtHome ? AppColors.emerald : AppColors.slate300,
+                    width: 2.5,
+                  ),
+                ),
+                child: ClipOval(
+                  child: member.avatarUrl != null
+                      ? Image.network(
+                          member.avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: AppColors.slate200,
+                            child: const Icon(
+                              Icons.person,
+                              color: AppColors.slate400,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: AppColors.slate200,
+                          child: const Icon(
+                            Icons.person,
+                            color: AppColors.slate400,
+                          ),
+                        ),
+                ),
+              ),
+              if (isAtHome)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.emerald,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: 56,
+            child: Text(
+              member.displayName.split(' ').first,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Who's Around — Mock (placeholder mode)
+// ---------------------------------------------------------------------------
+class _MockWhosAround extends StatelessWidget {
+  const _MockWhosAround({required this.homeCount});
 
   final int homeCount;
 
@@ -276,9 +527,9 @@ class _WhosAround extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
+            const Text(
               "Who's around?",
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppColors.slate800,
@@ -312,7 +563,7 @@ class _WhosAround extends StatelessWidget {
             itemBuilder: (context, index) {
               final user = users[index];
               final isAtHome = user.presence == 'home';
-              return _AvatarItem(user: user, isAtHome: isAtHome);
+              return _MockAvatarItem(user: user, isAtHome: isAtHome);
             },
           ),
         ),
@@ -321,8 +572,8 @@ class _WhosAround extends StatelessWidget {
   }
 }
 
-class _AvatarItem extends StatelessWidget {
-  const _AvatarItem({required this.user, required this.isAtHome});
+class _MockAvatarItem extends StatelessWidget {
+  const _MockAvatarItem({required this.user, required this.isAtHome});
 
   final MockUser user;
   final bool isAtHome;
@@ -342,8 +593,7 @@ class _AvatarItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color:
-                        isAtHome ? AppColors.emerald : AppColors.slate300,
+                    color: isAtHome ? AppColors.emerald : AppColors.slate300,
                     width: 2.5,
                   ),
                 ),
@@ -353,7 +603,8 @@ class _AvatarItem extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
                       color: AppColors.slate200,
-                      child: const Icon(Icons.person, color: AppColors.slate400),
+                      child: const Icon(
+                          Icons.person, color: AppColors.slate400),
                     ),
                   ),
                 ),
@@ -462,8 +713,7 @@ class _MomentumCard extends StatelessWidget {
           GestureDetector(
             onTap: onLeaderboardTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
