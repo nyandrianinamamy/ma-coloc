@@ -41,6 +41,9 @@ _$IssueImpl _$$IssueImplFromJson(Map<String, dynamic> json) => _$IssueImpl(
   autoCloseAt: const NullableTimestampConverter().fromJson(
     json['autoCloseAt'] as Timestamp?,
   ),
+  closedAt: const NullableTimestampConverter().fromJson(
+    json['closedAt'] as Timestamp?,
+  ),
   tags:
       (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
@@ -71,6 +74,9 @@ Map<String, dynamic> _$$IssueImplToJson(
   'reactions': instance.reactions,
   'autoCloseAt': const NullableTimestampConverter().toJson(
     instance.autoCloseAt,
+  ),
+  'closedAt': const NullableTimestampConverter().toJson(
+    instance.closedAt,
   ),
   'tags': instance.tags,
   'points': instance.points,

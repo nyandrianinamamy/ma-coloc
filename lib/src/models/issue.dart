@@ -60,6 +60,7 @@ class Issue with _$Issue {
     String? disputeReason,
     @Default({}) Map<String, String> reactions,
     @NullableTimestampConverter() Timestamp? autoCloseAt,
+    @NullableTimestampConverter() Timestamp? closedAt,
     // Categorization
     @Default([]) List<String> tags,
     required int points,

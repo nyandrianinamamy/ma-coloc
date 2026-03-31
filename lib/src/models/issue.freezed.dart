@@ -44,7 +44,9 @@ mixin _$Issue {
   String? get disputeReason => throw _privateConstructorUsedError;
   Map<String, String> get reactions => throw _privateConstructorUsedError;
   @NullableTimestampConverter()
-  Timestamp? get autoCloseAt => throw _privateConstructorUsedError; // Categorization
+  Timestamp? get autoCloseAt => throw _privateConstructorUsedError;
+  @NullableTimestampConverter()
+  Timestamp? get closedAt => throw _privateConstructorUsedError; // Categorization
   List<String> get tags => throw _privateConstructorUsedError;
   int get points => throw _privateConstructorUsedError;
 
@@ -83,6 +85,7 @@ abstract class $IssueCopyWith<$Res> {
     String? disputeReason,
     Map<String, String> reactions,
     @NullableTimestampConverter() Timestamp? autoCloseAt,
+    @NullableTimestampConverter() Timestamp? closedAt,
     List<String> tags,
     int points,
   });
@@ -123,6 +126,7 @@ class _$IssueCopyWithImpl<$Res, $Val extends Issue>
     Object? disputeReason = freezed,
     Object? reactions = null,
     Object? autoCloseAt = freezed,
+    Object? closedAt = freezed,
     Object? tags = null,
     Object? points = null,
   }) {
@@ -208,6 +212,10 @@ class _$IssueCopyWithImpl<$Res, $Val extends Issue>
                 ? _value.autoCloseAt
                 : autoCloseAt // ignore: cast_nullable_to_non_nullable
                       as Timestamp?,
+            closedAt: freezed == closedAt
+                ? _value.closedAt
+                : closedAt // ignore: cast_nullable_to_non_nullable
+                      as Timestamp?,
             tags: null == tags
                 ? _value.tags
                 : tags // ignore: cast_nullable_to_non_nullable
@@ -251,6 +259,7 @@ abstract class _$$IssueImplCopyWith<$Res> implements $IssueCopyWith<$Res> {
     String? disputeReason,
     Map<String, String> reactions,
     @NullableTimestampConverter() Timestamp? autoCloseAt,
+    @NullableTimestampConverter() Timestamp? closedAt,
     List<String> tags,
     int points,
   });
@@ -290,6 +299,7 @@ class __$$IssueImplCopyWithImpl<$Res>
     Object? disputeReason = freezed,
     Object? reactions = null,
     Object? autoCloseAt = freezed,
+    Object? closedAt = freezed,
     Object? tags = null,
     Object? points = null,
   }) {
@@ -375,6 +385,10 @@ class __$$IssueImplCopyWithImpl<$Res>
             ? _value.autoCloseAt
             : autoCloseAt // ignore: cast_nullable_to_non_nullable
                   as Timestamp?,
+        closedAt: freezed == closedAt
+            ? _value.closedAt
+            : closedAt // ignore: cast_nullable_to_non_nullable
+                  as Timestamp?,
         tags: null == tags
             ? _value._tags
             : tags // ignore: cast_nullable_to_non_nullable
@@ -412,6 +426,7 @@ class _$IssueImpl extends _Issue {
     this.disputeReason,
     final Map<String, String> reactions = const {},
     @NullableTimestampConverter() this.autoCloseAt,
+    @NullableTimestampConverter() this.closedAt,
     final List<String> tags = const [],
     required this.points,
   }) : _reactions = reactions,
@@ -477,6 +492,9 @@ class _$IssueImpl extends _Issue {
   @override
   @NullableTimestampConverter()
   final Timestamp? autoCloseAt;
+  @override
+  @NullableTimestampConverter()
+  final Timestamp? closedAt;
   // Categorization
   final List<String> _tags;
   // Categorization
@@ -493,7 +511,7 @@ class _$IssueImpl extends _Issue {
 
   @override
   String toString() {
-    return 'Issue(id: $id, type: $type, title: $title, description: $description, photoUrl: $photoUrl, createdBy: $createdBy, anonymous: $anonymous, createdAt: $createdAt, assignedTo: $assignedTo, assignedAt: $assignedAt, status: $status, resolvedBy: $resolvedBy, resolvedAt: $resolvedAt, resolutionPhotoUrl: $resolutionPhotoUrl, resolutionNote: $resolutionNote, disputedBy: $disputedBy, disputeAgainst: $disputeAgainst, disputeReason: $disputeReason, reactions: $reactions, autoCloseAt: $autoCloseAt, tags: $tags, points: $points)';
+    return 'Issue(id: $id, type: $type, title: $title, description: $description, photoUrl: $photoUrl, createdBy: $createdBy, anonymous: $anonymous, createdAt: $createdAt, assignedTo: $assignedTo, assignedAt: $assignedAt, status: $status, resolvedBy: $resolvedBy, resolvedAt: $resolvedAt, resolutionPhotoUrl: $resolutionPhotoUrl, resolutionNote: $resolutionNote, disputedBy: $disputedBy, disputeAgainst: $disputeAgainst, disputeReason: $disputeReason, reactions: $reactions, autoCloseAt: $autoCloseAt, closedAt: $closedAt, tags: $tags, points: $points)';
   }
 
   @override
@@ -539,6 +557,8 @@ class _$IssueImpl extends _Issue {
             ) &&
             (identical(other.autoCloseAt, autoCloseAt) ||
                 other.autoCloseAt == autoCloseAt) &&
+            (identical(other.closedAt, closedAt) ||
+                other.closedAt == closedAt) &&
             const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.points, points) || other.points == points));
   }
@@ -567,6 +587,7 @@ class _$IssueImpl extends _Issue {
     disputeReason,
     const DeepCollectionEquality().hash(_reactions),
     autoCloseAt,
+    closedAt,
     const DeepCollectionEquality().hash(_tags),
     points,
   ]);
@@ -607,6 +628,7 @@ abstract class _Issue extends Issue {
     final String? disputeReason,
     final Map<String, String> reactions,
     @NullableTimestampConverter() final Timestamp? autoCloseAt,
+    @NullableTimestampConverter() final Timestamp? closedAt,
     final List<String> tags,
     required final int points,
   }) = _$IssueImpl;
@@ -657,7 +679,10 @@ abstract class _Issue extends Issue {
   Map<String, String> get reactions;
   @override
   @NullableTimestampConverter()
-  Timestamp? get autoCloseAt; // Categorization
+  Timestamp? get autoCloseAt;
+  @override
+  @NullableTimestampConverter()
+  Timestamp? get closedAt; // Categorization
   @override
   List<String> get tags;
   @override

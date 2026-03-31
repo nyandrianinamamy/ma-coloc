@@ -11,3 +11,4 @@ export { resetPresence } from "./scheduled/reset-presence";
 export { createDeepClean } from "./scheduled/create-deep-clean";
 export { claimRoom } from "./callables/claim-room";
 export { completeRoom } from "./callables/complete-room";
+export { updateStreaks } from "./scheduled/update-streaks";

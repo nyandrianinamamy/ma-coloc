@@ -28,6 +28,8 @@ mixin _$MemberStats {
   int get longestStreak => throw _privateConstructorUsedError;
   List<String> get badges => throw _privateConstructorUsedError;
   String? get lastRandomAssignMonth => throw _privateConstructorUsedError;
+  int get deepCleanRoomsCompleted => throw _privateConstructorUsedError;
+  String? get lastStreakDate => throw _privateConstructorUsedError;
 
   /// Serializes this MemberStats to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -54,6 +56,8 @@ abstract class $MemberStatsCopyWith<$Res> {
     int longestStreak,
     List<String> badges,
     String? lastRandomAssignMonth,
+    int deepCleanRoomsCompleted,
+    String? lastStreakDate,
   });
 }
 
@@ -79,6 +83,8 @@ class _$MemberStatsCopyWithImpl<$Res, $Val extends MemberStats>
     Object? longestStreak = null,
     Object? badges = null,
     Object? lastRandomAssignMonth = freezed,
+    Object? deepCleanRoomsCompleted = null,
+    Object? lastStreakDate = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -110,6 +116,14 @@ class _$MemberStatsCopyWithImpl<$Res, $Val extends MemberStats>
                 ? _value.lastRandomAssignMonth
                 : lastRandomAssignMonth // ignore: cast_nullable_to_non_nullable
                       as String?,
+            deepCleanRoomsCompleted: null == deepCleanRoomsCompleted
+                ? _value.deepCleanRoomsCompleted
+                : deepCleanRoomsCompleted // ignore: cast_nullable_to_non_nullable
+                      as int,
+            lastStreakDate: freezed == lastStreakDate
+                ? _value.lastStreakDate
+                : lastStreakDate // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -133,6 +147,8 @@ abstract class _$$MemberStatsImplCopyWith<$Res>
     int longestStreak,
     List<String> badges,
     String? lastRandomAssignMonth,
+    int deepCleanRoomsCompleted,
+    String? lastStreakDate,
   });
 }
 
@@ -157,6 +173,8 @@ class __$$MemberStatsImplCopyWithImpl<$Res>
     Object? longestStreak = null,
     Object? badges = null,
     Object? lastRandomAssignMonth = freezed,
+    Object? deepCleanRoomsCompleted = null,
+    Object? lastStreakDate = freezed,
   }) {
     return _then(
       _$MemberStatsImpl(
@@ -188,6 +206,14 @@ class __$$MemberStatsImplCopyWithImpl<$Res>
             ? _value.lastRandomAssignMonth
             : lastRandomAssignMonth // ignore: cast_nullable_to_non_nullable
                   as String?,
+        deepCleanRoomsCompleted: null == deepCleanRoomsCompleted
+            ? _value.deepCleanRoomsCompleted
+            : deepCleanRoomsCompleted // ignore: cast_nullable_to_non_nullable
+                  as int,
+        lastStreakDate: freezed == lastStreakDate
+            ? _value.lastStreakDate
+            : lastStreakDate // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -204,6 +230,8 @@ class _$MemberStatsImpl implements _MemberStats {
     this.longestStreak = 0,
     final List<String> badges = const [],
     this.lastRandomAssignMonth,
+    this.deepCleanRoomsCompleted = 0,
+    this.lastStreakDate,
   }) : _badges = badges;
 
   factory _$MemberStatsImpl.fromJson(Map<String, dynamic> json) =>
@@ -235,10 +263,15 @@ class _$MemberStatsImpl implements _MemberStats {
 
   @override
   final String? lastRandomAssignMonth;
+  @override
+  @JsonKey()
+  final int deepCleanRoomsCompleted;
+  @override
+  final String? lastStreakDate;
 
   @override
   String toString() {
-    return 'MemberStats(totalPoints: $totalPoints, issuesCreated: $issuesCreated, issuesResolved: $issuesResolved, currentStreak: $currentStreak, longestStreak: $longestStreak, badges: $badges, lastRandomAssignMonth: $lastRandomAssignMonth)';
+    return 'MemberStats(totalPoints: $totalPoints, issuesCreated: $issuesCreated, issuesResolved: $issuesResolved, currentStreak: $currentStreak, longestStreak: $longestStreak, badges: $badges, lastRandomAssignMonth: $lastRandomAssignMonth, deepCleanRoomsCompleted: $deepCleanRoomsCompleted, lastStreakDate: $lastStreakDate)';
   }
 
   @override
@@ -258,7 +291,11 @@ class _$MemberStatsImpl implements _MemberStats {
                 other.longestStreak == longestStreak) &&
             const DeepCollectionEquality().equals(other._badges, _badges) &&
             (identical(other.lastRandomAssignMonth, lastRandomAssignMonth) ||
-                other.lastRandomAssignMonth == lastRandomAssignMonth));
+                other.lastRandomAssignMonth == lastRandomAssignMonth) &&
+            (identical(other.deepCleanRoomsCompleted, deepCleanRoomsCompleted) ||
+                other.deepCleanRoomsCompleted == deepCleanRoomsCompleted) &&
+            (identical(other.lastStreakDate, lastStreakDate) ||
+                other.lastStreakDate == lastStreakDate));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -272,6 +309,8 @@ class _$MemberStatsImpl implements _MemberStats {
     longestStreak,
     const DeepCollectionEquality().hash(_badges),
     lastRandomAssignMonth,
+    deepCleanRoomsCompleted,
+    lastStreakDate,
   );
 
   /// Create a copy of MemberStats
@@ -297,6 +336,8 @@ abstract class _MemberStats implements MemberStats {
     final int longestStreak,
     final List<String> badges,
     final String? lastRandomAssignMonth,
+    final int deepCleanRoomsCompleted,
+    final String? lastStreakDate,
   }) = _$MemberStatsImpl;
 
   factory _MemberStats.fromJson(Map<String, dynamic> json) =
@@ -316,6 +357,10 @@ abstract class _MemberStats implements MemberStats {
   List<String> get badges;
   @override
   String? get lastRandomAssignMonth;
+  @override
+  int get deepCleanRoomsCompleted;
+  @override
+  String? get lastStreakDate;
 
   /// Create a copy of MemberStats
   /// with the given fields replaced by the non-null parameter values.

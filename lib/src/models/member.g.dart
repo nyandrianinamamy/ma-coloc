@@ -19,6 +19,9 @@ _$MemberStatsImpl _$$MemberStatsImplFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       lastRandomAssignMonth: json['lastRandomAssignMonth'] as String?,
+      deepCleanRoomsCompleted:
+          (json['deepCleanRoomsCompleted'] as num?)?.toInt() ?? 0,
+      lastStreakDate: json['lastStreakDate'] as String?,
     );
 
 Map<String, dynamic> _$$MemberStatsImplToJson(_$MemberStatsImpl instance) =>
@@ -30,6 +33,8 @@ Map<String, dynamic> _$$MemberStatsImplToJson(_$MemberStatsImpl instance) =>
       'longestStreak': instance.longestStreak,
       'badges': instance.badges,
       'lastRandomAssignMonth': instance.lastRandomAssignMonth,
+      'deepCleanRoomsCompleted': instance.deepCleanRoomsCompleted,
+      'lastStreakDate': instance.lastStreakDate,
     };
 
 _$MemberImpl _$$MemberImplFromJson(Map<String, dynamic> json) => _$MemberImpl(
