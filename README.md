@@ -200,7 +200,7 @@ Single-house enforcement: callables reject if user already belongs to a house.
 | 3 | Issue system: Firestore CRUD, photo upload, real-time streams, issue lifecycle | Done |
 | 4 | Cloud Functions: auto-close, presence, deep clean + client wiring | Done |
 | 5 | Gamification: points engine, badges, streaks, live leaderboard | Done |
-| 6 | Polish: notifications, settings mutations, activity feed, volunteer flow | Planned |
+| 6 | Polish: notifications, settings mutations, activity feed, volunteer flow | Done |
 
 > **Note:** Sprint 2 built all UI screens (Home, Issues, Create Issue, Issue Detail, Leaderboard, Profile, Settings, Deep Clean) against hardcoded mock data. Sprints 3–6 progressively wire real data and backend logic behind these screens.
 
