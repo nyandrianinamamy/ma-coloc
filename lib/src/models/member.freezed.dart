@@ -386,6 +386,9 @@ mixin _$Member {
   @TimestampConverter()
   Timestamp get presenceUpdatedAt => throw _privateConstructorUsedError;
   MemberStats get stats => throw _privateConstructorUsedError;
+  String? get fcmToken => throw _privateConstructorUsedError;
+  @JsonKey(defaultValue: true)
+  bool get notificationsEnabled => throw _privateConstructorUsedError;
 
   /// Serializes this Member to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -410,6 +413,8 @@ abstract class $MemberCopyWith<$Res> {
     Presence presence,
     @TimestampConverter() Timestamp presenceUpdatedAt,
     MemberStats stats,
+    String? fcmToken,
+    @JsonKey(defaultValue: true) bool notificationsEnabled,
   });
 
   $MemberStatsCopyWith<$Res> get stats;
@@ -438,6 +443,8 @@ class _$MemberCopyWithImpl<$Res, $Val extends Member>
     Object? presence = null,
     Object? presenceUpdatedAt = null,
     Object? stats = null,
+    Object? fcmToken = freezed,
+    Object? notificationsEnabled = null,
   }) {
     return _then(
       _value.copyWith(
@@ -473,6 +480,14 @@ class _$MemberCopyWithImpl<$Res, $Val extends Member>
                 ? _value.stats
                 : stats // ignore: cast_nullable_to_non_nullable
                       as MemberStats,
+            fcmToken: freezed == fcmToken
+                ? _value.fcmToken
+                : fcmToken // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            notificationsEnabled: null == notificationsEnabled
+                ? _value.notificationsEnabled
+                : notificationsEnabled // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -506,6 +521,8 @@ abstract class _$$MemberImplCopyWith<$Res> implements $MemberCopyWith<$Res> {
     Presence presence,
     @TimestampConverter() Timestamp presenceUpdatedAt,
     MemberStats stats,
+    String? fcmToken,
+    @JsonKey(defaultValue: true) bool notificationsEnabled,
   });
 
   @override
@@ -534,6 +551,8 @@ class __$$MemberImplCopyWithImpl<$Res>
     Object? presence = null,
     Object? presenceUpdatedAt = null,
     Object? stats = null,
+    Object? fcmToken = freezed,
+    Object? notificationsEnabled = null,
   }) {
     return _then(
       _$MemberImpl(
@@ -569,6 +588,14 @@ class __$$MemberImplCopyWithImpl<$Res>
             ? _value.stats
             : stats // ignore: cast_nullable_to_non_nullable
                   as MemberStats,
+        fcmToken: freezed == fcmToken
+            ? _value.fcmToken
+            : fcmToken // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        notificationsEnabled: null == notificationsEnabled
+            ? _value.notificationsEnabled
+            : notificationsEnabled // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -587,6 +614,8 @@ class _$MemberImpl implements _Member {
     this.presence = Presence.away,
     @TimestampConverter() required this.presenceUpdatedAt,
     this.stats = const MemberStats(),
+    this.fcmToken,
+    this.notificationsEnabled = true,
   });
 
   factory _$MemberImpl.fromJson(Map<String, dynamic> json) =>
@@ -613,10 +642,15 @@ class _$MemberImpl implements _Member {
   @override
   @JsonKey()
   final MemberStats stats;
+  @override
+  final String? fcmToken;
+  @override
+  @JsonKey(defaultValue: true)
+  final bool notificationsEnabled;
 
   @override
   String toString() {
-    return 'Member(uid: $uid, displayName: $displayName, avatarUrl: $avatarUrl, joinedAt: $joinedAt, role: $role, presence: $presence, presenceUpdatedAt: $presenceUpdatedAt, stats: $stats)';
+    return 'Member(uid: $uid, displayName: $displayName, avatarUrl: $avatarUrl, joinedAt: $joinedAt, role: $role, presence: $presence, presenceUpdatedAt: $presenceUpdatedAt, stats: $stats, fcmToken: $fcmToken, notificationsEnabled: $notificationsEnabled)';
   }
 
   @override
@@ -636,7 +670,11 @@ class _$MemberImpl implements _Member {
                 other.presence == presence) &&
             (identical(other.presenceUpdatedAt, presenceUpdatedAt) ||
                 other.presenceUpdatedAt == presenceUpdatedAt) &&
-            (identical(other.stats, stats) || other.stats == stats));
+            (identical(other.stats, stats) || other.stats == stats) &&
+            (identical(other.fcmToken, fcmToken) ||
+                other.fcmToken == fcmToken) &&
+            (identical(other.notificationsEnabled, notificationsEnabled) ||
+                other.notificationsEnabled == notificationsEnabled));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -651,6 +689,8 @@ class _$MemberImpl implements _Member {
     presence,
     presenceUpdatedAt,
     stats,
+    fcmToken,
+    notificationsEnabled,
   );
 
   /// Create a copy of Member
@@ -677,6 +717,8 @@ abstract class _Member implements Member {
     final Presence presence,
     @TimestampConverter() required final Timestamp presenceUpdatedAt,
     final MemberStats stats,
+    final String? fcmToken,
+    @JsonKey(defaultValue: true) final bool notificationsEnabled,
   }) = _$MemberImpl;
 
   factory _Member.fromJson(Map<String, dynamic> json) = _$MemberImpl.fromJson;
@@ -699,6 +741,11 @@ abstract class _Member implements Member {
   Timestamp get presenceUpdatedAt;
   @override
   MemberStats get stats;
+  @override
+  String? get fcmToken;
+  @override
+  @JsonKey(defaultValue: true)
+  bool get notificationsEnabled;
 
   /// Create a copy of Member
   /// with the given fields replaced by the non-null parameter values.

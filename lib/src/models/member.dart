@@ -39,6 +39,8 @@ class Member with _$Member {
     @Default(Presence.away) Presence presence,
     @TimestampConverter() required Timestamp presenceUpdatedAt,
     @Default(MemberStats()) MemberStats stats,
+    String? fcmToken,
+    @Default(true) bool notificationsEnabled,
   }) = _Member;
 
   factory Member.fromJson(Map<String, dynamic> json) =>

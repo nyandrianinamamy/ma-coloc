@@ -36,7 +36,7 @@ service cloud.firestore {
         allow update: if isMember(houseId) &&
           request.auth.uid == uid &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["presence", "presenceUpdatedAt"]);
+            .hasOnly(["presence", "presenceUpdatedAt", "notificationsEnabled", "fcmToken"]);
 
         // Creation and deletion handled by callables
         allow create, delete: if false;
@@ -86,6 +86,12 @@ service cloud.firestore {
 
       // Leaderboard — read only for members, written by Cloud Function
       match /leaderboard {
+        allow read: if isMember(houseId);
+        allow write: if false;
+      }
+
+      // Activity log — read-only for members, written by Cloud Functions
+      match /activity/{activityId} {
         allow read: if isMember(houseId);
         allow write: if false;
       }

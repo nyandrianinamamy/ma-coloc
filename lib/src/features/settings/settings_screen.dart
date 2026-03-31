@@ -1,17 +1,388 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../../firebase_options.dart';
 import '../../mock/mock_data.dart';
+import '../../models/member.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/house_provider.dart';
+import '../../providers/member_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../theme/app_theme.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  @override
+  Widget build(BuildContext context) {
+    // Placeholder mode: debug build with placeholder Firebase config
+    if (kDebugMode && DefaultFirebaseOptions.isPlaceholder) {
+      return const _MockSettingsScreen();
+    }
+
+    final houseIdAsync = ref.watch(currentHouseIdProvider);
+    final houseId = houseIdAsync.valueOrNull;
+
+    if (houseIdAsync.isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (houseId == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(child: Text('No house found.')),
+      );
+    }
+
+    final houseAsync = ref.watch(currentHouseProvider);
+    final membersAsync = ref.watch(membersStreamProvider(houseId));
+    final authAsync = ref.watch(authStateProvider);
+    final uid = authAsync.valueOrNull?.uid;
+
+    return membersAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: Text('Error: $e')),
+      ),
+      data: (members) {
+        final currentMember = members.where((m) => m.uid == uid).firstOrNull;
+        final isAdmin = currentMember?.role == MemberRole.admin;
+        final house = houseAsync.valueOrNull;
+        final houseName = house?.name ?? 'My House';
+        final memberCount = members.length;
+        final inviteCode = house?.inviteCode ?? '';
+        final notificationsEnabled =
+            currentMember?.notificationsEnabled ?? true;
+
+        return _LiveSettingsScreen(
+          houseId: houseId,
+          houseName: houseName,
+          memberCount: memberCount,
+          inviteCode: inviteCode,
+          members: members,
+          currentMember: currentMember,
+          isAdmin: isAdmin,
+          notificationsEnabled: notificationsEnabled,
+        );
+      },
+    );
+  }
+}
+
+// ─── Live Settings Screen ────────────────────────────────────────────────────
+
+class _LiveSettingsScreen extends ConsumerStatefulWidget {
+  const _LiveSettingsScreen({
+    required this.houseId,
+    required this.houseName,
+    required this.memberCount,
+    required this.inviteCode,
+    required this.members,
+    required this.currentMember,
+    required this.isAdmin,
+    required this.notificationsEnabled,
+  });
+
+  final String houseId;
+  final String houseName;
+  final int memberCount;
+  final String inviteCode;
+  final List<Member> members;
+  final Member? currentMember;
+  final bool isAdmin;
+  final bool notificationsEnabled;
+
+  @override
+  ConsumerState<_LiveSettingsScreen> createState() =>
+      _LiveSettingsScreenState();
+}
+
+class _LiveSettingsScreenState extends ConsumerState<_LiveSettingsScreen> {
+  bool _isEditingName = false;
+  late TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.houseName);
+  }
+
+  @override
+  void didUpdateWidget(_LiveSettingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isEditingName && oldWidget.houseName != widget.houseName) {
+      _nameController.text = widget.houseName;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitHouseName() async {
+    final newName = _nameController.text.trim();
+    if (newName.isEmpty) return;
+    setState(() => _isEditingName = false);
+    await ref.read(settingsActionsProvider.notifier).updateHouseName(
+          houseId: widget.houseId,
+          name: newName,
+        );
+  }
+
+  Future<void> _copyInviteCode() async {
+    await Clipboard.setData(ClipboardData(text: widget.inviteCode));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Copied!')),
+      );
+    }
+  }
+
+  void _shareInviteCode() {
+    Share.share(
+        'Join my house on MaColoc! Invite code: ${widget.inviteCode}');
+  }
+
+  Future<void> _showMemberOptions(Member member) async {
+    if (!widget.isAdmin) return;
+    // Don't show options for self
+    if (member.uid == widget.currentMember?.uid) return;
+
+    final isTargetAdmin = member.role == MemberRole.admin;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.slate200,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  member.displayName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.slate800,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Icon(
+                  isTargetAdmin
+                      ? Icons.person_outline_rounded
+                      : Icons.admin_panel_settings_outlined,
+                  color: AppColors.slate700,
+                ),
+                title: Text(
+                  isTargetAdmin ? 'Make Member' : 'Make Admin',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.slate800,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await ref
+                      .read(settingsActionsProvider.notifier)
+                      .updateMemberRole(
+                        houseId: widget.houseId,
+                        targetUid: member.uid,
+                        newRole: isTargetAdmin ? 'member' : 'admin',
+                      );
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.person_remove_outlined,
+                  color: AppColors.rose,
+                ),
+                title: const Text(
+                  'Remove from house',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.rose,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (dCtx) => AlertDialog(
+                      title: const Text('Remove member?'),
+                      content: Text(
+                          'Remove ${member.displayName} from the house?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dCtx).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(dCtx).pop(true),
+                          child: const Text(
+                            'Remove',
+                            style: TextStyle(color: AppColors.rose),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await ref
+                        .read(settingsActionsProvider.notifier)
+                        .removeMember(
+                          houseId: widget.houseId,
+                          targetUid: member.uid,
+                        );
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _leaveHouse() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: const Text('Leave house?'),
+        content:
+            Text('Are you sure you want to leave ${widget.houseName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(true),
+            child: const Text(
+              'Leave',
+              style: TextStyle(color: AppColors.rose),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await ref
+          .read(houseActionsProvider.notifier)
+          .leaveHouse(widget.houseId);
+      if (mounted) context.go('/onboarding');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SettingsHeader(),
+            const SizedBox(height: 28),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SectionLabel('THE HOUSE'),
+                  const SizedBox(height: 12),
+                  _LiveHouseInfoCard(
+                    houseId: widget.houseId,
+                    houseName: widget.houseName,
+                    memberCount: widget.memberCount,
+                    inviteCode: widget.inviteCode,
+                    isAdmin: widget.isAdmin,
+                    isEditingName: _isEditingName,
+                    nameController: _nameController,
+                    onEditTap: () =>
+                        setState(() => _isEditingName = true),
+                    onNameSubmit: _submitHouseName,
+                    onCopyCode: _copyInviteCode,
+                    onShareCode: _shareInviteCode,
+                  ),
+                  const SizedBox(height: 28),
+                  _SectionLabel('PREFERENCES'),
+                  const SizedBox(height: 12),
+                  _PreferencesCard(
+                    notificationsEnabled: widget.notificationsEnabled,
+                    onNotificationsChanged: (val) async {
+                      await ref
+                          .read(settingsActionsProvider.notifier)
+                          .toggleNotifications(
+                            houseId: widget.houseId,
+                            enabled: val,
+                          );
+                    },
+                  ),
+                  const SizedBox(height: 28),
+                  _LiveMembersSection(
+                    members: widget.members,
+                    currentMember: widget.currentMember,
+                    isAdmin: widget.isAdmin,
+                    onMemberLongPress: _showMemberOptions,
+                  ),
+                  const SizedBox(height: 28),
+                  _DangerZone(onLeave: _leaveHouse),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Mock Settings Screen ────────────────────────────────────────────────────
+
+class _MockSettingsScreen extends StatefulWidget {
+  const _MockSettingsScreen();
+
+  @override
+  State<_MockSettingsScreen> createState() => _MockSettingsScreenState();
+}
+
+class _MockSettingsScreenState extends State<_MockSettingsScreen> {
   bool _notificationsEnabled = true;
 
   @override
@@ -31,7 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   _SectionLabel('THE HOUSE'),
                   const SizedBox(height: 12),
-                  _HouseInfoCard(),
+                  _MockHouseInfoCard(),
                   const SizedBox(height: 28),
                   _SectionLabel('PREFERENCES'),
                   const SizedBox(height: 12),
@@ -41,9 +412,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         setState(() => _notificationsEnabled = val),
                   ),
                   const SizedBox(height: 28),
-                  _MembersSection(),
+                  _MockMembersSection(),
                   const SizedBox(height: 28),
-                  _DangerZone(),
+                  _DangerZone(onLeave: () {}),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -124,10 +495,239 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-// ─── House Info Card ─────────────────────────────────────────────────────────
+// ─── Live House Info Card ────────────────────────────────────────────────────
 
-class _HouseInfoCard extends StatelessWidget {
-  const _HouseInfoCard();
+class _LiveHouseInfoCard extends StatelessWidget {
+  const _LiveHouseInfoCard({
+    required this.houseId,
+    required this.houseName,
+    required this.memberCount,
+    required this.inviteCode,
+    required this.isAdmin,
+    required this.isEditingName,
+    required this.nameController,
+    required this.onEditTap,
+    required this.onNameSubmit,
+    required this.onCopyCode,
+    required this.onShareCode,
+  });
+
+  final String houseId;
+  final String houseName;
+  final int memberCount;
+  final String inviteCode;
+  final bool isAdmin;
+  final bool isEditingName;
+  final TextEditingController nameController;
+  final VoidCallback onEditTap;
+  final VoidCallback onNameSubmit;
+  final VoidCallback onCopyCode;
+  final VoidCallback onShareCode;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // House info row
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.slate100),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: AppColors.emerald100,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.home_rounded,
+                  color: AppColors.emerald,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isEditingName)
+                      TextField(
+                        controller: nameController,
+                        autofocus: true,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.slate800,
+                        ),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                        ),
+                        onSubmitted: (_) => onNameSubmit(),
+                        textInputAction: TextInputAction.done,
+                      )
+                    else
+                      Text(
+                        houseName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.slate800,
+                        ),
+                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$memberCount Member${memberCount == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isAdmin)
+                GestureDetector(
+                  onTap: isEditingName ? onNameSubmit : onEditTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.emerald,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      isEditingName ? 'Save' : 'Edit',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Invite code section
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.slate100,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Text(
+                'INVITE CODE',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.slate400,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.slate200),
+                ),
+                child: Text(
+                  inviteCode.isEmpty ? '--------' : inviteCode,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.slate800,
+                    letterSpacing: 4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Copy button
+                  GestureDetector(
+                    onTap: onCopyCode,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.slate200),
+                      ),
+                      child: const Icon(
+                        Icons.copy_rounded,
+                        size: 20,
+                        color: AppColors.slate500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Share button
+                  GestureDetector(
+                    onTap: onShareCode,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(
+                            Icons.share_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Share',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Mock House Info Card ────────────────────────────────────────────────────
+
+class _MockHouseInfoCard extends StatelessWidget {
+  const _MockHouseInfoCard();
 
   @override
   Widget build(BuildContext context) {
@@ -182,8 +782,8 @@ class _HouseInfoCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.emerald,
                   borderRadius: BorderRadius.circular(20),
@@ -330,7 +930,8 @@ class _PreferencesCard extends StatelessWidget {
         children: [
           // Notifications row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
               children: [
                 Container(
@@ -374,7 +975,8 @@ class _PreferencesCard extends StatelessWidget {
           Divider(height: 1, thickness: 1, color: AppColors.slate100),
           // Manage Rooms row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
               children: [
                 Container(
@@ -415,10 +1017,178 @@ class _PreferencesCard extends StatelessWidget {
   }
 }
 
-// ─── Members Section ─────────────────────────────────────────────────────────
+// ─── Live Members Section ────────────────────────────────────────────────────
 
-class _MembersSection extends StatelessWidget {
-  const _MembersSection();
+class _LiveMembersSection extends StatelessWidget {
+  const _LiveMembersSection({
+    required this.members,
+    required this.currentMember,
+    required this.isAdmin,
+    required this.onMemberLongPress,
+  });
+
+  final List<Member> members;
+  final Member? currentMember;
+  final bool isAdmin;
+  final Future<void> Function(Member) onMemberLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'MEMBERS',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.slate400,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            Text(
+              '${members.length} Total',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.emerald,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.slate100),
+          ),
+          child: Column(
+            children: [
+              for (int i = 0; i < members.length; i++) ...[
+                _LiveMemberRow(
+                  member: members[i],
+                  isSelf: members[i].uid == currentMember?.uid,
+                  canLongPress: isAdmin &&
+                      members[i].uid != currentMember?.uid,
+                  onLongPress: () => onMemberLongPress(members[i]),
+                ),
+                if (i < members.length - 1)
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.slate100,
+                    indent: 20,
+                    endIndent: 20,
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LiveMemberRow extends StatelessWidget {
+  const _LiveMemberRow({
+    required this.member,
+    required this.isSelf,
+    required this.canLongPress,
+    required this.onLongPress,
+  });
+
+  final Member member;
+  final bool isSelf;
+  final bool canLongPress;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = member.role == MemberRole.admin;
+
+    return GestureDetector(
+      onLongPress: canLongPress ? onLongPress : null,
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: AppColors.slate100,
+              backgroundImage: member.avatarUrl != null
+                  ? NetworkImage(member.avatarUrl!)
+                  : null,
+              child: member.avatarUrl == null
+                  ? const Icon(Icons.person,
+                      size: 20, color: AppColors.slate400)
+                  : null,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                isSelf
+                    ? '${member.displayName} (You)'
+                    : member.displayName,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate800,
+                ),
+              ),
+            ),
+            if (isAdmin)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.emerald100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'ADMIN',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.emerald,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'MEMBER',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.slate500,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Mock Members Section ────────────────────────────────────────────────────
+
+class _MockMembersSection extends StatelessWidget {
+  const _MockMembersSection();
 
   @override
   Widget build(BuildContext context) {
@@ -440,9 +1210,9 @@ class _MembersSection extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
+            const Text(
               'View All',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppColors.emerald,
@@ -460,7 +1230,10 @@ class _MembersSection extends StatelessWidget {
           child: Column(
             children: [
               for (int i = 0; i < members.length; i++) ...[
-                _MemberRow(user: members[i], isAdmin: members[i].id == 'u1'),
+                _MockMemberRow(
+                  user: members[i],
+                  isAdmin: members[i].id == 'u1',
+                ),
                 if (i < members.length - 1)
                   const Divider(
                     height: 1,
@@ -478,8 +1251,8 @@ class _MembersSection extends StatelessWidget {
   }
 }
 
-class _MemberRow extends StatelessWidget {
-  const _MemberRow({required this.user, required this.isAdmin});
+class _MockMemberRow extends StatelessWidget {
+  const _MockMemberRow({required this.user, required this.isAdmin});
 
   final MockUser user;
   final bool isAdmin;
@@ -508,8 +1281,8 @@ class _MemberRow extends StatelessWidget {
           ),
           if (isAdmin)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.emerald100,
                 borderRadius: BorderRadius.circular(20),
@@ -533,12 +1306,14 @@ class _MemberRow extends StatelessWidget {
 // ─── Danger Zone ─────────────────────────────────────────────────────────────
 
 class _DangerZone extends StatelessWidget {
-  const _DangerZone();
+  const _DangerZone({required this.onLeave});
+
+  final VoidCallback onLeave;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onLeave,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),

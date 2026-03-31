@@ -1,6 +1,7 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { DateTime } from "luxon";
+import { sendNotificationToHouse } from "../notifications";
 
 export const createDeepClean = onSchedule("every day 09:00", async () => {
   const db = getFirestore();
@@ -65,5 +66,12 @@ export const createDeepClean = onSchedule("every day 09:00", async () => {
     });
 
     await batch.commit();
+
+    // Send FCM reminder to all house members
+    await sendNotificationToHouse(
+      house.id,
+      "Deep Clean Time!",
+      "New deep clean cycle started — claim your rooms!",
+    );
   }
 });
