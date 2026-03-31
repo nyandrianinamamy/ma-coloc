@@ -1,24 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../mock/mock_data.dart';
+import '../../models/issue.dart';
+import '../../providers/house_provider.dart';
+import '../../providers/issue_provider.dart';
 import '../../theme/app_theme.dart';
 import 'widgets/issue_card.dart';
 
-class IssuesListScreen extends StatefulWidget {
+class IssuesListScreen extends ConsumerStatefulWidget {
   const IssuesListScreen({super.key});
 
   @override
-  State<IssuesListScreen> createState() => _IssuesListScreenState();
+  ConsumerState<IssuesListScreen> createState() => _IssuesListScreenState();
 }
 
-class _IssuesListScreenState extends State<IssuesListScreen> {
+class _IssuesListScreenState extends ConsumerState<IssuesListScreen> {
   int _activeTab = 0; // 0=All, 1=Mine, 2=Open
-  String _activeFilter = 'All'; // 'All', 'Chore', 'Grocery', 'Repair', 'Other'
+  IssueType? _activeTypeFilter; // null means "All"
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   static const List<String> _tabs = ['All', 'Mine', 'Open'];
-  static const List<String> _filters = ['All', 'Chore', 'Grocery', 'Repair', 'Other'];
+  static const List<String> _filterLabels = [
+    'All',
+    'Chore',
+    'Grocery',
+    'Repair',
+    'Other'
+  ];
+  static const List<IssueType?> _filterTypes = [
+    null,
+    IssueType.chore,
+    IssueType.grocery,
+    IssueType.repair,
+    IssueType.other,
+  ];
+
+  IssueTab get _issueTab => IssueTab.values[_activeTab];
+
+  String get _activeFilterLabel =>
+      _filterLabels[_filterTypes.indexOf(_activeTypeFilter)];
 
   @override
   void initState() {
@@ -34,37 +55,20 @@ class _IssuesListScreenState extends State<IssuesListScreen> {
     super.dispose();
   }
 
-  List<MockIssue> get _filteredIssues {
-    var issues = MockData.issues;
-
-    // Tab filter
-    if (_activeTab == 1) {
-      issues = issues
-          .where((i) => i.assigneeId == MockData.currentUser.id)
-          .toList();
-    } else if (_activeTab == 2) {
-      issues = issues.where((i) => i.status == 'open').toList();
-    }
-
-    // Type filter chip
-    if (_activeFilter != 'All') {
-      issues = issues
-          .where((i) => i.type.toLowerCase() == _activeFilter.toLowerCase())
-          .toList();
-    }
-
-    // Search query
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      issues = issues.where((i) => i.title.toLowerCase().contains(q)).toList();
-    }
-
-    return issues;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filteredIssues = _filteredIssues;
+    final houseId = ref.watch(currentHouseIdProvider).valueOrNull;
+
+    if (houseId == null) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final issuesAsync = ref.watch(
+      issuesStreamProvider(IssueQueryParams(houseId: houseId, tab: _issueTab)),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -87,33 +91,66 @@ class _IssuesListScreenState extends State<IssuesListScreen> {
               child: _StickyHeader(
                 searchController: _searchController,
                 activeTab: _activeTab,
-                activeFilter: _activeFilter,
+                activeFilter: _activeFilterLabel,
                 onTabChanged: (i) => setState(() => _activeTab = i),
-                onFilterChanged: (f) => setState(() => _activeFilter = f),
+                onFilterChanged: (f) => setState(
+                  () => _activeTypeFilter =
+                      _filterTypes[_filterLabels.indexOf(f)],
+                ),
                 tabs: _tabs,
-                filters: _filters,
+                filters: _filterLabels,
               ),
             ),
           ),
 
-          // Issue list or empty state
-          if (filteredIssues.isEmpty)
-            const SliverFillRemaining(
-              child: _EmptyState(),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: IssueCard(issue: filteredIssues[index]),
+          // Issue list or loading/error/empty state
+          ...issuesAsync.when(
+            loading: () => [
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+            error: (e, _) => [
+              SliverFillRemaining(
+                child: Center(
+                  child: Text(
+                    'Error loading issues',
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
-                  childCount: filteredIssues.length,
                 ),
               ),
-            ),
+            ],
+            data: (issues) {
+              final filtered = filterBySearch(
+                filterByType(issues, _activeTypeFilter),
+                _searchQuery,
+              );
+
+              if (filtered.isEmpty) {
+                return [
+                  const SliverFillRemaining(child: _EmptyState()),
+                ];
+              }
+
+              return [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: IssueCard(
+                          issue: filtered[index],
+                          houseId: houseId,
+                        ),
+                      ),
+                      childCount: filtered.length,
+                    ),
+                  ),
+                ),
+              ];
+            },
+          ),
         ],
       ),
     );
