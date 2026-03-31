@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart';
 
 import '../models/issue.dart';
 import 'auth_provider.dart';
@@ -46,16 +45,17 @@ List<Issue> filterByType(List<Issue> issues, IssueType? type) {
 List<Issue> filterBySearch(List<Issue> issues, String query) {
   if (query.isEmpty) return issues;
   final lower = query.toLowerCase();
-  return issues.where((i) {
-    if (i.title == null) return false;
-    return i.title!.toLowerCase().contains(lower);
-  }).toList();
+  return issues
+      .where((i) => i.title?.toLowerCase().contains(lower) ?? false)
+      .toList();
 }
 
 // ---------------------------------------------------------------------------
 // Stream providers
 // ---------------------------------------------------------------------------
 
+/// Streams a list of issues for a given house filtered by [IssueQueryParams].
+/// Returns an empty list for the `mine` tab when the user is not authenticated.
 final issuesStreamProvider =
     StreamProvider.family<List<Issue>, IssueQueryParams>((ref, params) {
   final db = ref.watch(firestoreProvider);
@@ -70,6 +70,7 @@ final issuesStreamProvider =
     case IssueTab.all:
       query = col.orderBy('createdAt', descending: true).limit(50);
     case IssueTab.mine:
+      if (uid == null) return Stream.value([]);
       query = col
           .where('assignedTo', isEqualTo: uid)
           .orderBy('createdAt', descending: true)
@@ -86,6 +87,7 @@ final issuesStreamProvider =
       );
 });
 
+/// Streams a single issue document, or null if it does not exist.
 final issueDetailProvider =
     StreamProvider.family<Issue?, (String houseId, String issueId)>(
         (ref, args) {
@@ -111,6 +113,7 @@ final firebaseStorageProvider = Provider<FirebaseStorage>((ref) {
 // Issue actions
 // ---------------------------------------------------------------------------
 
+/// Notifier for create / claim / resolve / dispute / react actions on issues.
 final issueActionsProvider =
     NotifierProvider<IssueActions, AsyncValue<void>>(IssueActions.new);
 
@@ -120,7 +123,12 @@ class IssueActions extends Notifier<AsyncValue<void>> {
 
   FirebaseFirestore get _db => ref.read(firestoreProvider);
   FirebaseStorage get _storage => ref.read(firebaseStorageProvider);
-  String get _uid => ref.read(authStateProvider).valueOrNull!.uid;
+
+  /// Returns null when no user is signed in.
+  String? get _uid => ref.read(authStateProvider).valueOrNull?.uid;
+
+  CollectionReference<Map<String, dynamic>> _issuesCol(String houseId) =>
+      _db.collection('houses/$houseId/issues');
 
   Future<String?> _uploadPhoto(String path, XFile photo) async {
     final ref = _storage.ref(path);
@@ -128,7 +136,8 @@ class IssueActions extends Notifier<AsyncValue<void>> {
     return ref.getDownloadURL();
   }
 
-  Future<void> create({
+  /// Creates a new issue and returns its Firestore document ID.
+  Future<String> create({
     required String houseId,
     required IssueType type,
     String? title,
@@ -136,9 +145,15 @@ class IssueActions extends Notifier<AsyncValue<void>> {
     bool anonymous = false,
     XFile? photo,
   }) async {
+    final uid = _uid;
+    if (uid == null) throw StateError('Not authenticated');
+
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final issueId = const Uuid().v4();
+
+    String? issueId;
+    try {
+      final docRef = _issuesCol(houseId).doc();
+      issueId = docRef.id;
 
       String? photoUrl;
       if (photo != null) {
@@ -154,27 +169,33 @@ class IssueActions extends Notifier<AsyncValue<void>> {
         title: title,
         description: description,
         photoUrl: photoUrl,
-        createdBy: _uid,
+        createdBy: uid,
         anonymous: anonymous,
         createdAt: Timestamp.now(),
         points: Issue.pointsForType(type),
       );
 
-      await _db
-          .collection('houses/$houseId/issues')
-          .doc(issueId)
-          .set(issue.toJson());
-    });
+      await docRef.set(issue.toJson());
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+
+    return issueId;
   }
 
   Future<void> claim({
     required String houseId,
     required String issueId,
   }) async {
+    final uid = _uid;
+    if (uid == null) throw StateError('Not authenticated');
+
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _db.collection('houses/$houseId/issues').doc(issueId).update({
-        'assignedTo': _uid,
+      await _issuesCol(houseId).doc(issueId).update({
+        'assignedTo': uid,
         'assignedAt': FieldValue.serverTimestamp(),
         'status': 'in_progress',
       });
@@ -187,6 +208,9 @@ class IssueActions extends Notifier<AsyncValue<void>> {
     String? note,
     XFile? resolutionPhoto,
   }) async {
+    final uid = _uid;
+    if (uid == null) throw StateError('Not authenticated');
+
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       String? resolutionPhotoUrl;
@@ -197,8 +221,8 @@ class IssueActions extends Notifier<AsyncValue<void>> {
         );
       }
 
-      await _db.collection('houses/$houseId/issues').doc(issueId).update({
-        'resolvedBy': _uid,
+      await _issuesCol(houseId).doc(issueId).update({
+        'resolvedBy': uid,
         'resolvedAt': FieldValue.serverTimestamp(),
         'resolutionNote': note,
         'resolutionPhotoUrl': resolutionPhotoUrl,
@@ -213,10 +237,13 @@ class IssueActions extends Notifier<AsyncValue<void>> {
     required String reason,
     required String resolvedByUid,
   }) async {
+    final uid = _uid;
+    if (uid == null) throw StateError('Not authenticated');
+
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _db.collection('houses/$houseId/issues').doc(issueId).update({
-        'disputedBy': _uid,
+      await _issuesCol(houseId).doc(issueId).update({
+        'disputedBy': uid,
         'disputeAgainst': resolvedByUid,
         'disputeReason': reason,
         'status': 'disputed',
@@ -229,24 +256,23 @@ class IssueActions extends Notifier<AsyncValue<void>> {
     required String issueId,
     required String emoji,
   }) async {
+    final uid = _uid;
+    if (uid == null) throw StateError('Not authenticated');
+
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final uid = _uid;
-      final doc =
-          await _db.collection('houses/$houseId/issues').doc(issueId).get();
+      final doc = await _issuesCol(houseId).doc(issueId).get();
       final data = doc.data();
       final reactions = (data?['reactions'] as Map<String, dynamic>?) ?? {};
 
       if (reactions[uid] == emoji) {
         // Toggle off — remove the reaction
-        await _db
-            .collection('houses/$houseId/issues')
+        await _issuesCol(houseId)
             .doc(issueId)
             .update({'reactions.$uid': FieldValue.delete()});
       } else {
         // Set the new reaction (replaces any existing one)
-        await _db
-            .collection('houses/$houseId/issues')
+        await _issuesCol(houseId)
             .doc(issueId)
             .update({'reactions.$uid': emoji});
       }
