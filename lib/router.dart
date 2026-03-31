@@ -12,6 +12,7 @@ import 'src/features/onboarding/join_house_screen.dart';
 import 'src/features/onboarding/house_created_screen.dart';
 import 'src/features/shell/mobile_shell.dart';
 import 'src/features/home/home_screen.dart';
+import 'src/features/issues/issues_list_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -95,9 +96,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/issues',
-                builder: (context, state) => const Scaffold(
-                  body: Center(child: Text('Issues — Coming Soon')),
-                ),
+                builder: (context, state) => const IssuesListScreen(),
               ),
             ],
           ),
