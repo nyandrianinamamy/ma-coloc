@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'router.dart';
+import 'src/theme/app_theme.dart';
 
 class MaColocApp extends ConsumerWidget {
   const MaColocApp({super.key});
@@ -10,16 +11,7 @@ class MaColocApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'MaColoc',
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF4A9EFF),
-        useMaterial3: true,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: const Color(0xFF4A9EFF),
-        useMaterial3: true,
-        brightness: Brightness.dark,
-      ),
+      theme: AppTheme.light,
       routerConfig: router,
     );
   }
