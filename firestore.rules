@@ -1,0 +1,94 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the user is a member of the house
+    function isMember(houseId) {
+      return request.auth != null &&
+        request.auth.uid in get(/databases/$(database)/documents/houses/$(houseId)).data.members;
+    }
+
+    // Helper: check if the user is an admin of the house
+    function isAdmin(houseId) {
+      return isMember(houseId) &&
+        get(/databases/$(database)/documents/houses/$(houseId)/members/$(request.auth.uid)).data.role == "admin";
+    }
+
+    match /houses/{houseId} {
+      // Any member can read the house document
+      allow read: if isMember(houseId);
+
+      // House creation is handled by createHouse callable — deny client writes
+      allow create: if false;
+
+      // Only admins can update house settings (but not the members array)
+      allow update: if isAdmin(houseId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(["members", "createdBy", "createdAt", "inviteCode"]);
+
+      allow delete: if false;
+
+      // Members subcollection — managed by callables, deny direct client writes
+      match /members/{uid} {
+        allow read: if isMember(houseId);
+
+        // Members can only update their own presence
+        allow update: if isMember(houseId) &&
+          request.auth.uid == uid &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["presence", "presenceUpdatedAt"]);
+
+        // Creation and deletion handled by callables
+        allow create, delete: if false;
+      }
+
+      // Issues
+      match /issues/{issueId} {
+        allow read: if isMember(houseId);
+
+        // Any member can create an issue; createdBy must match auth uid
+        allow create: if isMember(houseId) &&
+          request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.status == "open";
+
+        // Members can update issues (claim, resolve, dispute, react)
+        allow update: if isMember(houseId) && (
+          // Claiming: set assignedTo to self
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["assignedTo", "assignedAt", "status"]) &&
+           request.resource.data.assignedTo == request.auth.uid) ||
+          // Resolving: set resolvedBy to self
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["resolvedBy", "resolvedAt", "resolutionPhotoUrl", "resolutionNote", "status"]) &&
+           request.resource.data.resolvedBy == request.auth.uid) ||
+          // Disputing: disputedBy must be self and not the resolver
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["disputedBy", "disputeAgainst", "disputeReason", "status"]) &&
+           request.resource.data.disputedBy == request.auth.uid &&
+           request.resource.data.disputedBy != resource.data.resolvedBy) ||
+          // Reacting: only adding own reaction
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"]))
+        );
+
+        // Only admins can delete issues
+        allow delete: if isAdmin(houseId);
+      }
+
+      // Deep cleans
+      match /deepCleans/{cleanId} {
+        allow read: if isMember(houseId);
+
+        // Clients can add volunteer intents during volunteering phase
+        allow update: if isMember(houseId) &&
+          resource.data.status == "volunteering" &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["volunteerIntents"]);
+
+        // Creation handled by Cloud Function
+        allow create, delete: if false;
+      }
+
+      // Leaderboard — read only for members, written by Cloud Function
+      match /leaderboard {
+        allow read: if isMember(houseId);
+        allow write: if false;
+      }
+    }
+  }
+}
