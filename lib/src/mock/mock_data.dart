@@ -174,7 +174,7 @@ class MockData {
   static List<MockActivity> get activities => [
         MockActivity(
           id: 'a1',
-          type: 'opened',
+          type: 'created',
           user: userById('u2')!,
           issue: issues[0],
           time: '3h ago',

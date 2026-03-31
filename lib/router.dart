@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'firebase_options.dart';
 import 'src/providers/auth_provider.dart';
 import 'src/providers/house_provider.dart';
 import 'src/features/onboarding/sign_in_screen.dart';
@@ -21,6 +23,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
     redirect: (context, state) {
+      // Dev bypass: skip auth when Firebase is placeholder (no real backend)
+      if (kDebugMode && DefaultFirebaseOptions.isPlaceholder) {
+        // Allow free navigation — go to /home if on root or sign-in
+        if (state.matchedLocation == '/' ||
+            state.matchedLocation == '/sign-in') {
+          return '/home';
+        }
+        return null;
+      }
+
       final isLoggedIn = authState.valueOrNull != null;
       final isOnAuthPage = state.matchedLocation == '/sign-in';
       final isOnOnboarding = state.matchedLocation.startsWith('/onboarding');

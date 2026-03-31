@@ -24,112 +24,145 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(child: _Header()),
+          // White card header: title + toggle + who's around
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: _PresenceToggle(
-                isHome: _isHome,
-                onChanged: (v) => setState(() => _isHome = v),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
+                boxShadow: [BoxShadow(color: Color(0x0A000000), blurRadius: 8)],
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'The Treehouse',
+                                style: Theme.of(context).textTheme.headlineSmall,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '6 Roommates',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.slate100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_outlined,
+                                  color: AppColors.slate700,
+                                  size: 24,
+                                ),
+                              ),
+                              Positioned(
+                                top: 12,
+                                right: 12,
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.orange,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.slate100, width: 2),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Presence toggle
+                      _PresenceToggle(
+                        isHome: _isHome,
+                        onChanged: (v) => setState(() => _isHome = v),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Who's around
+                      _WhosAround(homeCount: homeUsers.length),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
+
+          // Momentum card
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
-              child: _WhosAround(homeCount: homeUsers.length),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
               child: _MomentumCard(
                 onLeaderboardTap: () => context.go('/leaderboard'),
               ),
             ),
           ),
+
+          // Activity header
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-              child: Text(
-                'Recent Activity',
-                style: Theme.of(context).textTheme.titleMedium,
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recent Activity',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.slate800,
+                    ),
+                  ),
+                  Text(
+                    'View all',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.orange,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _ActivityItem(
-                activity: activities[index],
-                isLast: index == activities.length - 1,
+
+          // Activity feed
+          SliverPadding(
+            padding: const EdgeInsets.only(top: 16),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _ActivityItem(
+                  activity: activities[index],
+                  isLast: index == activities.length - 1,
+                ),
+                childCount: activities.length,
               ),
-              childCount: activities.length,
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Header
-// ---------------------------------------------------------------------------
-class _Header extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'The Treehouse',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '6 Roommates',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                color: AppColors.textPrimary,
-                onPressed: () {},
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.orange,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -158,25 +191,23 @@ class _PresenceToggle extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Animated pill
+          // Animated white pill
           AnimatedAlign(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutBack,
             alignment:
                 isHome ? Alignment.centerLeft : Alignment.centerRight,
             child: FractionallySizedBox(
               widthFactor: 0.5,
               child: Container(
-                margin: const EdgeInsets.all(4),
+                margin: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isHome ? AppColors.emerald : AppColors.orange,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: (isHome ? AppColors.emerald : AppColors.orange)
-                          .withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: Color(0x0A000000),
+                      blurRadius: 4,
                     ),
                   ],
                 ),
@@ -197,7 +228,7 @@ class _PresenceToggle extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color:
-                            isHome ? Colors.white : AppColors.textSecondary,
+                            isHome ? AppColors.emerald : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -214,7 +245,7 @@ class _PresenceToggle extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color:
-                            !isHome ? Colors.white : AppColors.textSecondary,
+                            !isHome ? AppColors.orange : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -242,41 +273,42 @@ class _WhosAround extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Row(
-            children: [
-              Text(
-                "Who's around?",
-                style: Theme.of(context).textTheme.titleMedium,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Who's around?",
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.slate800,
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.emerald100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '$homeCount Home',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.emerald,
-                  ),
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.emerald100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$homeCount Home',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.emerald,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+        const SizedBox(height: 16),
         SizedBox(
-          height: 88,
+          height: 90,
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: users.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
               final user = users[index];
               final isAtHome = user.presence == 'home';
@@ -372,77 +404,78 @@ class _MomentumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topUser = MockData.users
-        .reduce((a, b) => a.points > b.points ? a : b);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [AppColors.emerald, AppColors.teal],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: AppColors.emerald.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: AppColors.emerald.withValues(alpha: 0.25),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: const [
-                    Text('🔥', style: TextStyle(fontSize: 20)),
-                    SizedBox(width: 6),
-                    Text(
-                      'House on fire!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  '${topUser.name} leads with ${topUser.points} pts  •  ${topUser.streak} day streak',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: const Icon(
+                  Icons.local_fire_department,
+                  color: Color(0xFFFDE047),
+                  size: 24,
                 ),
-                const SizedBox(height: 14),
-                GestureDetector(
-                  onTap: onLeaderboardTap,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.4), width: 1),
-                    ),
-                    child: const Text(
-                      'View Leaderboard',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'House on fire!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your house resolved 12 issues this week. Keep up the momentum!',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: onLeaderboardTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'View Leaderboard',
+                style: TextStyle(
+                  color: AppColors.emerald,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ],
@@ -465,7 +498,7 @@ class _ActivityItem extends StatelessWidget {
 
   Color get _dotColor {
     switch (activity.type) {
-      case 'opened':
+      case 'created':
         return AppColors.orange;
       case 'resolved':
         return AppColors.emerald;
@@ -480,14 +513,14 @@ class _ActivityItem extends StatelessWidget {
 
   IconData get _dotIcon {
     switch (activity.type) {
-      case 'opened':
-        return Icons.add_circle_outline;
+      case 'created':
+        return Icons.error_outline;
       case 'resolved':
         return Icons.check_circle_outline;
       case 'disputed':
-        return Icons.error_outline;
+        return Icons.chat_bubble_outline;
       case 'claimed':
-        return Icons.person_outline;
+        return Icons.search;
       default:
         return Icons.circle_outlined;
     }
@@ -495,16 +528,16 @@ class _ActivityItem extends StatelessWidget {
 
   String get _verb {
     switch (activity.type) {
-      case 'opened':
-        return 'opened';
+      case 'created':
+        return ' flagged an issue: ';
       case 'resolved':
-        return 'resolved';
+        return ' resolved ';
       case 'disputed':
-        return 'disputed';
+        return ' disputed ';
       case 'claimed':
-        return 'claimed';
+        return ' claimed ';
       default:
-        return activity.type;
+        return ' ${activity.type} ';
     }
   }
 
@@ -514,8 +547,8 @@ class _ActivityItem extends StatelessWidget {
         return 50;
       case 'claimed':
         return 10;
-      case 'opened':
-        return 5;
+      case 'created':
+        return 10;
       default:
         return 0;
     }
@@ -577,20 +610,22 @@ class _ActivityItem extends StatelessWidget {
                               ),
                               children: [
                                 TextSpan(
-                                  text: activity.user.name,
+                                  text: activity.user.name.split(' ').first,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w700),
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary),
                                 ),
                                 TextSpan(
-                                  text: ' $_verb ',
+                                  text: _verb,
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w400,
                                       color: AppColors.textSecondary),
                                 ),
                                 TextSpan(
-                                  text: activity.issue.title,
+                                  text: '"${activity.issue.title}"',
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary),
                                 ),
                               ],
                             ),
