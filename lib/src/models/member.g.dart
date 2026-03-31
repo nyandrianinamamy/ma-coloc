@@ -53,6 +53,8 @@ _$MemberImpl _$$MemberImplFromJson(Map<String, dynamic> json) => _$MemberImpl(
   stats: json['stats'] == null
       ? const MemberStats()
       : MemberStats.fromJson(json['stats'] as Map<String, dynamic>),
+  fcmToken: json['fcmToken'] as String?,
+  notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
 );
 
 Map<String, dynamic> _$$MemberImplToJson(_$MemberImpl instance) =>
@@ -67,6 +69,8 @@ Map<String, dynamic> _$$MemberImplToJson(_$MemberImpl instance) =>
         instance.presenceUpdatedAt,
       ),
       'stats': instance.stats.toJson(),
+      'fcmToken': instance.fcmToken,
+      'notificationsEnabled': instance.notificationsEnabled,
     };
 
 const _$MemberRoleEnumMap = {
