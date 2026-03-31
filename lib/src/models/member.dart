@@ -19,6 +19,8 @@ class MemberStats with _$MemberStats {
     @Default(0) int longestStreak,
     @Default([]) List<String> badges,
     String? lastRandomAssignMonth,
+    @Default(0) int deepCleanRoomsCompleted,
+    String? lastStreakDate,
   }) = _MemberStats;
 
   factory MemberStats.fromJson(Map<String, dynamic> json) =>
