@@ -16,6 +16,22 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
+    {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "autoCloseAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "presence", "order": "ASCENDING" },
+        { "fieldPath": "presenceUpdatedAt", "order": "ASCENDING" }
+      ]
+    }
   ],
   "fieldOverrides": []
 }

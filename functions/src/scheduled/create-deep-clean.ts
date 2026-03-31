@@ -4,9 +4,6 @@ import { DateTime } from "luxon";
 
 export const createDeepClean = onSchedule("every day 09:00", async () => {
   const db = getFirestore();
-  const now = DateTime.utc();
-  const currentMonth = now.toFormat("yyyy-MM");
-  const todayWeekday = now.weekday; // 1=Mon, 7=Sun (ISO)
 
   const houses = await db.collection("houses").get();
 
@@ -15,6 +12,12 @@ export const createDeepClean = onSchedule("every day 09:00", async () => {
     const settings = data.settings || {};
     const deepCleanDay: number = settings.deepCleanDay || 1;
     const lastDeepCleanMonth: string | null = data.lastDeepCleanMonth || null;
+    const timezone: string = data.timezone || "UTC";
+
+    // Use the house's configured timezone for date calculations
+    const now = DateTime.now().setZone(timezone);
+    const currentMonth = now.toFormat("yyyy-MM");
+    const todayWeekday = now.weekday; // 1=Mon, 7=Sun (ISO)
 
     // Only create if today matches deepCleanDay AND we haven't created for this month
     if (todayWeekday !== deepCleanDay) continue;
