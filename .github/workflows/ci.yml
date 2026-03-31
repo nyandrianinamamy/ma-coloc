@@ -91,4 +91,4 @@ jobs:
           done
 
       - name: Run integration tests
-        run: flutter test integration_test/ -d web-server
+        run: flutter test integration_test/
