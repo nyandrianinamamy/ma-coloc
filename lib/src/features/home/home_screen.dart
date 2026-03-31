@@ -12,6 +12,7 @@ import '../../providers/deep_clean_provider.dart';
 import '../../providers/house_provider.dart';
 import '../../providers/leaderboard_provider.dart';
 import '../../providers/member_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../theme/app_theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -54,6 +55,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         body: Center(child: Text('Error: $e')),
       ),
       data: (members) {
+        ref.watch(notificationSetupProvider);
+
         final currentMemberList =
             members.where((m) => m.uid == currentUid).toList();
         final isHome = currentMemberList.isNotEmpty &&

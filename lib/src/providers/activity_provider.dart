@@ -64,6 +64,7 @@ final activityFeedProvider =
     Provider.family<AsyncValue<List<ActivityItem>>, String>((ref, houseId) {
   final activityAsync = ref.watch(activityStreamProvider(houseId));
   final recentIssuesAsync = ref.watch(_recentIssuesProvider(houseId));
+  final recentResolvedAsync = ref.watch(_recentResolvedProvider(houseId));
 
   return activityAsync.when(
     loading: () => const AsyncLoading(),
@@ -71,42 +72,50 @@ final activityFeedProvider =
     data: (activityEvents) => recentIssuesAsync.when(
       loading: () => const AsyncLoading(),
       error: (e, st) => AsyncError(e, st),
-      data: (issues) {
-        final items = <ActivityItem>[];
+      data: (recentIssues) => recentResolvedAsync.when(
+        loading: () => const AsyncLoading(),
+        error: (e, st) => AsyncError(e, st),
+        data: (recentResolved) {
+          final items = <ActivityItem>[];
 
-        for (final issue in issues) {
-          items.add(ActivityItem(
-            type: 'created',
-            userName: issue.createdBy,
-            detail: issue.title ?? 'Untitled',
-            timestamp: issue.createdAt.toDate(),
-            issueId: issue.id,
-          ));
-
-          if (issue.resolvedBy != null && issue.resolvedAt != null) {
+          // From recent issues — only 'created' events
+          for (final issue in recentIssues) {
             items.add(ActivityItem(
-              type: 'resolved',
-              userName: issue.resolvedBy!,
+              type: 'created',
+              userName: issue.anonymous ? 'Anonymous' : issue.createdBy,
               detail: issue.title ?? 'Untitled',
-              timestamp: issue.resolvedAt!.toDate(),
+              timestamp: issue.createdAt.toDate(),
               issueId: issue.id,
-              points: issue.points,
             ));
           }
-        }
 
-        for (final event in activityEvents) {
-          items.add(ActivityItem(
-            type: event.type.name,
-            userName: event.displayName,
-            detail: event.detail,
-            timestamp: event.createdAt.toDate(),
-          ));
-        }
+          // From recently resolved issues — only 'resolved' events
+          for (final issue in recentResolved) {
+            if (issue.resolvedBy != null && issue.resolvedAt != null) {
+              items.add(ActivityItem(
+                type: 'resolved',
+                userName: issue.resolvedBy!,
+                detail: issue.title ?? 'Untitled',
+                timestamp: issue.resolvedAt!.toDate(),
+                issueId: issue.id,
+                points: issue.points,
+              ));
+            }
+          }
 
-        items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        return AsyncData(items.take(30).toList());
-      },
+          for (final event in activityEvents) {
+            items.add(ActivityItem(
+              type: event.type.name,
+              userName: event.displayName,
+              detail: event.detail,
+              timestamp: event.createdAt.toDate(),
+            ));
+          }
+
+          items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          return AsyncData(items.take(30).toList());
+        },
+      ),
     ),
   );
 });
@@ -117,6 +126,18 @@ final _recentIssuesProvider =
   return db
       .collection('houses/$houseId/issues')
       .orderBy('createdAt', descending: true)
+      .limit(20)
+      .snapshots()
+      .map((snap) => snap.docs.map(Issue.fromFirestore).toList());
+});
+
+final _recentResolvedProvider =
+    StreamProvider.family<List<Issue>, String>((ref, houseId) {
+  final db = ref.watch(firestoreProvider);
+  return db
+      .collection('houses/$houseId/issues')
+      .where('status', whereIn: ['resolved', 'closed'])
+      .orderBy('resolvedAt', descending: true)
       .limit(20)
       .snapshots()
       .map((snap) => snap.docs.map(Issue.fromFirestore).toList());
