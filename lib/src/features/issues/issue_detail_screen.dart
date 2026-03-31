@@ -1,12 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-import '../../mock/mock_data.dart';
+import '../../models/issue.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/house_provider.dart';
+import '../../providers/issue_provider.dart';
 import '../../theme/app_theme.dart';
 
-class IssueDetailScreen extends StatelessWidget {
+class IssueDetailScreen extends ConsumerWidget {
   const IssueDetailScreen({super.key, required this.issueId});
 
   final String issueId;
@@ -15,41 +20,29 @@ class IssueDetailScreen extends StatelessWidget {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  MockIssue? _findIssue() {
-    try {
-      return MockData.issues.firstWhere((i) => i.id == issueId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Color _typeColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'chore':
+  Color _typeColor(IssueType type) {
+    switch (type) {
+      case IssueType.chore:
         return AppColors.orange;
-      case 'grocery':
+      case IssueType.grocery:
         return AppColors.emerald;
-      case 'repair':
+      case IssueType.repair:
         return AppColors.blue;
-      case 'other':
+      case IssueType.other:
         return AppColors.indigo;
-      default:
-        return AppColors.slate400;
     }
   }
 
-  IconData _typeIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'chore':
+  IconData _typeIcon(IssueType type) {
+    switch (type) {
+      case IssueType.chore:
         return Icons.cleaning_services_outlined;
-      case 'grocery':
+      case IssueType.grocery:
         return Icons.shopping_cart_outlined;
-      case 'repair':
+      case IssueType.repair:
         return Icons.build_outlined;
-      case 'other':
+      case IssueType.other:
         return Icons.category_outlined;
-      default:
-        return Icons.help_outline;
     }
   }
 
@@ -58,42 +51,42 @@ class IssueDetailScreen extends StatelessWidget {
     Color dotColor,
     IconData iconData,
     String label,
-  }) _statusConfig(String status) {
+  }) _statusConfig(IssueStatus status) {
     switch (status) {
-      case 'open':
+      case IssueStatus.open:
         return (
           color: AppColors.orange,
           dotColor: AppColors.orange,
           iconData: Icons.radio_button_unchecked,
           label: 'OPEN',
         );
-      case 'in-progress':
+      case IssueStatus.inProgress:
         return (
           color: AppColors.blue,
           dotColor: AppColors.blue,
           iconData: Icons.autorenew,
           label: 'IN PROGRESS',
         );
-      case 'resolved':
+      case IssueStatus.resolved:
         return (
           color: AppColors.emerald,
           dotColor: AppColors.emerald,
           iconData: Icons.check_circle_outline,
           label: 'RESOLVED',
         );
-      case 'disputed':
+      case IssueStatus.disputed:
         return (
           color: AppColors.rose,
           dotColor: AppColors.rose,
           iconData: Icons.chat_bubble_outline,
           label: 'DISPUTED',
         );
-      default:
+      case IssueStatus.closed:
         return (
           color: AppColors.slate400,
           dotColor: AppColors.slate400,
-          iconData: Icons.help_outline,
-          label: status.toUpperCase(),
+          iconData: Icons.lock_outline,
+          label: 'CLOSED',
         );
     }
   }
@@ -103,10 +96,11 @@ class IssueDetailScreen extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   @override
-  Widget build(BuildContext context) {
-    final issue = _findIssue();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final houseId = ref.watch(currentHouseIdProvider).valueOrNull;
+    final currentUid = ref.watch(authStateProvider).valueOrNull?.uid;
 
-    if (issue == null) {
+    if (houseId == null) {
       return Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -115,84 +109,285 @@ class IssueDetailScreen extends StatelessWidget {
             onPressed: () => context.pop(),
           ),
         ),
-        body: const Center(child: Text('Issue not found')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    final author = MockData.userById(issue.authorId);
-    final assignee =
-        issue.assigneeId != null ? MockData.userById(issue.assigneeId!) : null;
-    final status = _statusConfig(issue.status);
-    final typeColor = _typeColor(issue.type);
-    final typeIcon = _typeIcon(issue.type);
+    final issueAsync = ref.watch(issueDetailProvider((houseId, issueId)));
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // Scrollable content
-          CustomScrollView(
-            slivers: [
-              // ----------------------------------------------------------------
-              // Photo Header
-              // ----------------------------------------------------------------
-              SliverToBoxAdapter(
-                child: _PhotoHeader(
-                  issue: issue,
-                  typeColor: typeColor,
-                  typeIcon: typeIcon,
-                  status: status,
-                  onBack: () => context.pop(),
-                ),
+    return issueAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: Center(child: Text('Error: $e')),
+      ),
+      data: (issue) {
+        if (issue == null) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => context.pop(),
+              ),
+            ),
+            body: const Center(child: Text('Issue not found')),
+          );
+        }
+
+        final status = _statusConfig(issue.status);
+        final typeColor = _typeColor(issue.type);
+        final typeIcon = _typeIcon(issue.type);
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          extendBodyBehindAppBar: true,
+          body: Stack(
+            children: [
+              // Scrollable content
+              CustomScrollView(
+                slivers: [
+                  // ----------------------------------------------------------------
+                  // Photo Header
+                  // ----------------------------------------------------------------
+                  SliverToBoxAdapter(
+                    child: _PhotoHeader(
+                      issue: issue,
+                      typeColor: typeColor,
+                      typeIcon: typeIcon,
+                      status: status,
+                      onBack: () => context.pop(),
+                    ),
+                  ),
+
+                  // ----------------------------------------------------------------
+                  // Content
+                  // ----------------------------------------------------------------
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        // Author / Assignee card
+                        _AuthorAssigneeCard(
+                          createdBy: issue.createdBy,
+                          anonymous: issue.anonymous,
+                          assignedTo: issue.assignedTo,
+                          createdAt: issue.createdAt,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Description
+                        const _SectionLabel(label: 'DESCRIPTION'),
+                        const SizedBox(height: 8),
+                        _DescriptionCard(
+                          description: issue.description ?? '—',
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Timeline
+                        const _SectionLabel(label: 'TIMELINE'),
+                        const SizedBox(height: 8),
+                        _TimelineSection(issue: issue),
+                      ]),
+                    ),
+                  ),
+                ],
               ),
 
               // ----------------------------------------------------------------
-              // Content
+              // Bottom action bar (fixed)
               // ----------------------------------------------------------------
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    // Author / Assignee card
-                    _AuthorAssigneeCard(
-                      author: author,
-                      assignee: assignee,
-                      createdAt: issue.createdAt,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Description
-                    _SectionLabel(label: 'DESCRIPTION'),
-                    const SizedBox(height: 8),
-                    _DescriptionCard(description: issue.description),
-                    const SizedBox(height: 20),
-
-                    // Timeline
-                    _SectionLabel(label: 'TIMELINE'),
-                    const SizedBox(height: 8),
-                    _TimelineSection(
-                      issue: issue,
-                      author: author,
-                      assignee: assignee,
-                    ),
-                  ]),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _BottomActionBar(
+                  issue: issue,
+                  currentUid: currentUid,
+                  onClaim: () {
+                    ref
+                        .read(issueActionsProvider.notifier)
+                        .claim(houseId: houseId, issueId: issueId);
+                  },
+                  onResolve: () => _showResolveSheet(
+                    context,
+                    ref,
+                    houseId: houseId,
+                    issueId: issueId,
+                  ),
+                  onDispute: () => _showDisputeDialog(
+                    context,
+                    ref,
+                    houseId: houseId,
+                    issueId: issueId,
+                    issue: issue,
+                  ),
+                  onReact: () {
+                    ref.read(issueActionsProvider.notifier).react(
+                          houseId: houseId,
+                          issueId: issueId,
+                          emoji: '👏',
+                        );
+                  },
                 ),
               ),
             ],
           ),
+        );
+      },
+    );
+  }
 
-          // ----------------------------------------------------------------
-          // Bottom action bar (fixed)
-          // ----------------------------------------------------------------
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _BottomActionBar(status: issue.status),
-          ),
-        ],
+  // ---------------------------------------------------------------------------
+  // Resolve bottom sheet
+  // ---------------------------------------------------------------------------
+
+  void _showResolveSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    required String houseId,
+    required String issueId,
+  }) {
+    final noteController = TextEditingController();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            24,
+            16,
+            16 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Resolution Note (optional)',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.slate800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: noteController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'How did you fix it?',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.emerald,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    ref.read(issueActionsProvider.notifier).resolve(
+                          houseId: houseId,
+                          issueId: issueId,
+                          note: noteController.text.trim().isEmpty
+                              ? null
+                              : noteController.text.trim(),
+                        );
+                  },
+                  child: const Text(
+                    'Confirm Resolution',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dispute dialog
+  // ---------------------------------------------------------------------------
+
+  void _showDisputeDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    required String houseId,
+    required String issueId,
+    required Issue issue,
+  }) {
+    final reasonController = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Dispute Resolution'),
+          content: TextField(
+            controller: reasonController,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              hintText: 'Why are you disputing?',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                ref.read(issueActionsProvider.notifier).dispute(
+                      houseId: houseId,
+                      issueId: issueId,
+                      reason: reasonController.text.trim(),
+                      resolvedByUid: issue.resolvedBy!,
+                    );
+              },
+              child: const Text(
+                'Dispute',
+                style: TextStyle(color: AppColors.rose),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -210,7 +405,7 @@ class _PhotoHeader extends StatelessWidget {
     required this.onBack,
   });
 
-  final MockIssue issue;
+  final Issue issue;
   final Color typeColor;
   final IconData typeIcon;
   final ({Color color, Color dotColor, IconData iconData, String label}) status;
@@ -289,7 +484,7 @@ class _PhotoHeader extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    issue.type.toUpperCase(),
+                    issue.type.name.toUpperCase(),
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
@@ -346,7 +541,7 @@ class _PhotoHeader extends StatelessWidget {
                 const SizedBox(height: 6),
                 // Title
                 Text(
-                  issue.title,
+                  issue.title ?? 'Untitled Issue',
                   style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -393,18 +588,21 @@ class _GlassCircleButton extends StatelessWidget {
 
 class _AuthorAssigneeCard extends StatelessWidget {
   const _AuthorAssigneeCard({
-    required this.author,
-    required this.assignee,
+    required this.createdBy,
+    required this.anonymous,
+    required this.assignedTo,
     required this.createdAt,
   });
 
-  final MockUser? author;
-  final MockUser? assignee;
-  final DateTime createdAt;
+  final String createdBy;
+  final bool anonymous;
+  final String? assignedTo;
+  final Timestamp createdAt;
 
   @override
   Widget build(BuildContext context) {
-    final timeStr = timeago.format(createdAt);
+    final timeStr = timeago.format(createdAt.toDate());
+    final authorLabel = anonymous ? 'Anonymous' : createdBy;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -419,14 +617,14 @@ class _AuthorAssigneeCard extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                _AvatarCircle(user: author, size: 36),
+                const _AvatarCircle(size: 36),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        author?.name ?? 'Unknown',
+                        authorLabel,
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -473,9 +671,9 @@ class _AuthorAssigneeCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
+              const Text(
                 'ASSIGNEE',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textTertiary,
@@ -483,19 +681,19 @@ class _AuthorAssigneeCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              assignee != null
+              assignedTo != null
                   ? Row(
                       children: [
-                        Text(
-                          assignee!.name,
-                          style: const TextStyle(
+                        const Text(
+                          'Assigned',
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppColors.slate800,
                           ),
                         ),
                         const SizedBox(width: 6),
-                        _AvatarCircle(user: assignee, size: 28),
+                        const _AvatarCircle(size: 28),
                       ],
                     )
                   : Container(
@@ -524,13 +722,12 @@ class _AuthorAssigneeCard extends StatelessWidget {
 }
 
 // =============================================================================
-// Avatar circle
+// Avatar circle (generic — no network image)
 // =============================================================================
 
 class _AvatarCircle extends StatelessWidget {
-  const _AvatarCircle({required this.user, required this.size});
+  const _AvatarCircle({required this.size});
 
-  final MockUser? user;
   final double size;
 
   @override
@@ -543,22 +740,12 @@ class _AvatarCircle extends StatelessWidget {
         color: AppColors.slate200,
         border: Border.all(color: AppColors.border, width: 1.5),
       ),
-      child: ClipOval(
-        child: user != null
-            ? Image.network(
-                user!.avatarUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.person,
-                  size: size * 0.55,
-                  color: AppColors.slate400,
-                ),
-              )
-            : Icon(
-                Icons.person,
-                size: size * 0.55,
-                color: AppColors.slate400,
-              ),
+      child: Center(
+        child: Icon(
+          Icons.person,
+          size: size * 0.55,
+          color: AppColors.slate400,
+        ),
       ),
     );
   }
@@ -624,19 +811,13 @@ class _DescriptionCard extends StatelessWidget {
 // =============================================================================
 
 class _TimelineSection extends StatelessWidget {
-  const _TimelineSection({
-    required this.issue,
-    required this.author,
-    required this.assignee,
-  });
+  const _TimelineSection({required this.issue});
 
-  final MockIssue issue;
-  final MockUser? author;
-  final MockUser? assignee;
+  final Issue issue;
 
   @override
   Widget build(BuildContext context) {
-    final timeStr = timeago.format(issue.createdAt);
+    final timeStr = timeago.format(issue.createdAt.toDate());
     final steps = <_TimelineStep>[];
 
     // Step 1: Issue Reported (always)
@@ -645,24 +826,24 @@ class _TimelineSection extends StatelessWidget {
       icon: Icons.error_outline,
       iconColor: AppColors.rose,
       title: 'Issue Reported',
-      subtitle: '$timeStr by ${author?.name ?? 'Unknown'}',
+      subtitle: '$timeStr by ${issue.anonymous ? 'Anonymous' : 'Author'}',
       isLast: false,
     ));
 
     // Step 2: Claimed (if assignee exists)
-    if (assignee != null) {
+    if (issue.assignedTo != null) {
       steps.add(_TimelineStep(
         iconBg: AppColors.blue100,
         icon: Icons.person_outline,
         iconColor: AppColors.blue,
         title: 'Claimed',
-        subtitle: 'by ${assignee!.name}',
+        subtitle: 'by Assignee',
         isLast: false,
       ));
     }
 
     // Step 3: Resolved (if status=resolved)
-    if (issue.status == 'resolved') {
+    if (issue.status == IssueStatus.resolved) {
       steps.add(_TimelineStep(
         iconBg: AppColors.emerald,
         icon: Icons.check,
@@ -674,13 +855,13 @@ class _TimelineSection extends StatelessWidget {
     }
 
     // Step 3 (alt): Disputed (if status=disputed)
-    if (issue.status == 'disputed') {
+    if (issue.status == IssueStatus.disputed) {
       steps.add(_TimelineStep(
         iconBg: AppColors.rose,
         icon: Icons.warning_rounded,
         iconColor: Colors.white,
         title: 'Disputed',
-        subtitle: 'by ${assignee?.name ?? 'Someone'}. "Still dirty!"',
+        subtitle: 'by Reporter. "${issue.disputeReason ?? 'No reason given'}"',
         isLast: true,
       ));
     }
@@ -804,9 +985,21 @@ class _TimelineStep extends StatelessWidget {
 // =============================================================================
 
 class _BottomActionBar extends StatelessWidget {
-  const _BottomActionBar({required this.status});
+  const _BottomActionBar({
+    required this.issue,
+    required this.currentUid,
+    required this.onClaim,
+    required this.onResolve,
+    required this.onDispute,
+    required this.onReact,
+  });
 
-  final String status;
+  final Issue issue;
+  final String? currentUid;
+  final VoidCallback onClaim;
+  final VoidCallback onResolve;
+  final VoidCallback onDispute;
+  final VoidCallback onReact;
 
   @override
   Widget build(BuildContext context) {
@@ -825,54 +1018,81 @@ class _BottomActionBar extends StatelessWidget {
   }
 
   Widget _buildActions(BuildContext context) {
-    switch (status) {
-      case 'open':
+    switch (issue.status) {
+      case IssueStatus.open:
         return _ActionButton(
           label: 'Claim Issue (+50 pts)',
           backgroundColor: AppColors.orange,
           textColor: Colors.white,
           icon: Icons.arrow_forward_rounded,
-          onTap: () {},
+          onTap: onClaim,
         );
 
-      case 'in-progress':
-        return _ActionButton(
-          label: 'Mark Resolved',
-          backgroundColor: AppColors.emerald,
-          textColor: Colors.white,
-          icon: Icons.check_rounded,
-          onTap: () {},
-        );
-
-      case 'resolved':
-        return Row(
-          children: [
-            Expanded(
-              child: _ActionButton(
-                label: 'Dispute',
-                backgroundColor: Colors.white,
-                textColor: AppColors.rose,
-                borderColor: AppColors.rose,
-                icon: Icons.warning_rounded,
-                iconColor: AppColors.rose,
-                onTap: () {},
+      case IssueStatus.inProgress:
+        if (issue.assignedTo == currentUid) {
+          return _ActionButton(
+            label: 'Mark Resolved',
+            backgroundColor: AppColors.emerald,
+            textColor: Colors.white,
+            icon: Icons.check_rounded,
+            onTap: onResolve,
+          );
+        } else {
+          return const Center(
+            child: Text(
+              'Assigned to someone else',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textTertiary,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ActionButton(
-                label: 'Props',
-                backgroundColor: AppColors.emerald50,
-                textColor: AppColors.emerald,
-                icon: Icons.celebration_outlined,
-                iconColor: AppColors.emerald,
-                onTap: () {},
-              ),
-            ),
-          ],
-        );
+          );
+        }
 
-      case 'disputed':
+      case IssueStatus.resolved:
+        if (issue.resolvedBy == currentUid) {
+          // Resolved by current user — only show Props
+          return _ActionButton(
+            label: 'Props',
+            backgroundColor: AppColors.emerald50,
+            textColor: AppColors.emerald,
+            icon: Icons.celebration_outlined,
+            iconColor: AppColors.emerald,
+            onTap: onReact,
+          );
+        } else {
+          // Not the resolver — show both Dispute and Props
+          return Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  label: 'Dispute',
+                  backgroundColor: Colors.white,
+                  textColor: AppColors.rose,
+                  borderColor: AppColors.rose,
+                  icon: Icons.warning_rounded,
+                  iconColor: AppColors.rose,
+                  onTap: onDispute,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionButton(
+                  label: 'Props',
+                  backgroundColor: AppColors.emerald50,
+                  textColor: AppColors.emerald,
+                  icon: Icons.celebration_outlined,
+                  iconColor: AppColors.emerald,
+                  onTap: onReact,
+                ),
+              ),
+            ],
+          );
+        }
+
+      case IssueStatus.disputed:
+      case IssueStatus.closed:
         return const Center(
           child: Text(
             'No actions available',
@@ -883,9 +1103,6 @@ class _BottomActionBar extends StatelessWidget {
             ),
           ),
         );
-
-      default:
-        return const SizedBox.shrink();
     }
   }
 }
