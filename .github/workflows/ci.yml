@@ -80,6 +80,12 @@ jobs:
       - name: Build Functions
         run: cd functions && npm run build
 
+      - name: Install chromedriver
+        uses: nanasess/setup-chromedriver@v2
+
+      - name: Start chromedriver
+        run: chromedriver --port=4444 &
+
       - name: Start Firebase emulators
         run: firebase emulators:start --only auth,firestore,storage,functions &
 
@@ -91,4 +97,4 @@ jobs:
           done
 
       - name: Run integration tests
-        run: flutter test integration_test/
+        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/issue_flow_test.dart -d chrome --headless
