@@ -219,7 +219,7 @@ class _Podium extends StatelessWidget {
     // top3[0] = 1st, top3[1] = 2nd, top3[2] = 3rd
     // Display order: 2nd (left), 1st (center), 3rd (right)
     return SizedBox(
-      height: 220,
+      height: 240,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.center,
