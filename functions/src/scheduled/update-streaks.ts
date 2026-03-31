@@ -2,6 +2,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { DateTime } from "luxon";
 import { evaluateNewBadges, MemberStatsSnapshot } from "../badges";
+import { sendNotification } from "../notifications";
 
 export const updateStreaks = onSchedule("every day 03:00", async () => {
   const db = getFirestore();
@@ -74,6 +75,35 @@ export const updateStreaks = onSchedule("every day 03:00", async () => {
             "stats.badges": FieldValue.arrayUnion(...newBadges),
           });
           opCount++;
+        }
+
+        // Activity + FCM for streak milestones (7, 30)
+        const displayName: string = data.displayName || "Unknown";
+        if (newStreak === 7 || newStreak === 30) {
+          await db.collection(`houses/${house.id}/activity`).add({
+            type: "streakMilestone",
+            uid: memberDoc.id,
+            displayName,
+            detail: String(newStreak),
+            createdAt: Timestamp.now(),
+          });
+        }
+
+        // Activity + FCM for new badges
+        for (const badgeId of newBadges) {
+          await db.collection(`houses/${house.id}/activity`).add({
+            type: "badgeEarned",
+            uid: memberDoc.id,
+            displayName,
+            detail: badgeId,
+            createdAt: Timestamp.now(),
+          });
+          await sendNotification(
+            house.id,
+            memberDoc.id,
+            "New Badge!",
+            `You earned the ${badgeId.replace(/_/g, " ")} badge!`,
+          );
         }
       } else {
         if (currentStreak > 0) {
