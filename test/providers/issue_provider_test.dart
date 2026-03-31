@@ -65,6 +65,18 @@ void main() {
     });
   });
 
+  group('autoCloseAt computation', () {
+    test('Timestamp arithmetic produces future value', () {
+      final now = Timestamp.now();
+      const disputeWindowHours = 48;
+      final autoCloseAt = Timestamp.fromMillisecondsSinceEpoch(
+        now.millisecondsSinceEpoch + (disputeWindowHours * 60 * 60 * 1000),
+      );
+      final diff = autoCloseAt.millisecondsSinceEpoch - now.millisecondsSinceEpoch;
+      expect(diff, 48 * 60 * 60 * 1000);
+    });
+  });
+
   group('filterBySearch', () {
     final issues = [
       _makeIssue(id: '1', title: 'Broken faucet'),
