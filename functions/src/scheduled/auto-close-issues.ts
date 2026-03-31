@@ -18,13 +18,21 @@ export const autoCloseIssues = onSchedule("every day 02:00", async () => {
 
     if (issues.empty) continue;
 
-    const batch = db.batch();
-    for (const issue of issues.docs) {
-      batch.update(issue.ref, {
+    const BATCH_LIMIT = 499;
+    let batch = db.batch();
+    let opCount = 0;
+    for (const doc of issues.docs) {
+      batch.update(doc.ref, {
         status: "closed",
         closedAt: now,
       });
+      opCount++;
+      if (opCount >= BATCH_LIMIT) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
     }
-    await batch.commit();
+    if (opCount > 0) await batch.commit();
   }
 });

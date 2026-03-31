@@ -17,13 +17,21 @@ export const resetPresence = onSchedule("every day 00:00", async () => {
 
     if (staleMembers.empty) continue;
 
-    const batch = db.batch();
-    for (const member of staleMembers.docs) {
-      batch.update(member.ref, {
+    const BATCH_LIMIT = 499;
+    let batch = db.batch();
+    let opCount = 0;
+    for (const doc of staleMembers.docs) {
+      batch.update(doc.ref, {
         presence: "away",
         presenceUpdatedAt: now,
       });
+      opCount++;
+      if (opCount >= BATCH_LIMIT) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
     }
-    await batch.commit();
+    if (opCount > 0) await batch.commit();
   }
 });

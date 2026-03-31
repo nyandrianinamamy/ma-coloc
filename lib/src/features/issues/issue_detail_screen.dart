@@ -412,12 +412,16 @@ class IssueDetailScreen extends ConsumerWidget {
                   ),
                   onPressed: () {
                     Navigator.of(ctx).pop();
+                    final house = ref.read(currentHouseProvider).valueOrNull;
+                    final windowHours =
+                        house?.settings.disputeWindowHours ?? 48;
                     ref.read(issueActionsProvider.notifier).resolve(
                           houseId: houseId,
                           issueId: issueId,
                           note: noteController.text.trim().isEmpty
                               ? null
                               : noteController.text.trim(),
+                          disputeWindowHours: windowHours,
                         );
                   },
                   child: const Text(
@@ -972,7 +976,7 @@ class _TimelineSection extends StatelessWidget {
           icon: Icons.check,
           iconColor: Colors.white,
           title: 'Resolved',
-          subtitle: 'by Resolver',
+          subtitle: 'by ${issue.resolvedBy ?? 'Assignee'}',
           isLast: false,
         ));
       }

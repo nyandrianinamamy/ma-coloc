@@ -228,7 +228,7 @@ class IssueActions extends Notifier<AsyncValue<void>> {
 
       await _issuesCol(houseId).doc(issueId).update({
         'resolvedBy': uid,
-        'resolvedAt': FieldValue.serverTimestamp(),
+        'resolvedAt': now,
         'resolutionNote': note,
         'resolutionPhotoUrl': resolutionPhotoUrl,
         'status': 'resolved',
