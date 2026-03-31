@@ -24,6 +24,17 @@ export const createHouse = onCall(async (request) => {
 
   const db = getFirestore();
   const uid = request.auth.uid;
+
+  // Enforce single-house membership
+  const existing = await db
+    .collection("houses")
+    .where("members", "array-contains", uid)
+    .limit(1)
+    .get();
+  if (!existing.empty) {
+    throw new HttpsError("already-exists", "You are already a member of a house");
+  }
+
   const inviteCode = generateInviteCode();
   const now = Timestamp.now();
 

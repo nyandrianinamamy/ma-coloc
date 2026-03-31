@@ -63,8 +63,9 @@ service cloud.firestore {
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["disputedBy", "disputeAgainst", "disputeReason", "status"]) &&
            request.resource.data.disputedBy == request.auth.uid &&
            request.resource.data.disputedBy != resource.data.resolvedBy) ||
-          // Reacting: only adding own reaction
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"]))
+          // Reacting: only the caller's own key in reactions may change
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"]) &&
+           request.resource.data.reactions.diff(resource.data.reactions).affectedKeys().hasOnly([request.auth.uid]))
         );
 
         // Only admins can delete issues
@@ -75,10 +76,9 @@ service cloud.firestore {
       match /deepCleans/{cleanId} {
         allow read: if isMember(houseId);
 
-        // Clients can add volunteer intents during volunteering phase
-        allow update: if isMember(houseId) &&
-          resource.data.status == "volunteering" &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["volunteerIntents"]);
+        // volunteerIntents is keyed by room name, not uid — client-side rules
+        // cannot restrict per-user access. Managed by callable (Sprint 3).
+        allow update: if false;
 
         // Creation handled by Cloud Function
         allow create, delete: if false;

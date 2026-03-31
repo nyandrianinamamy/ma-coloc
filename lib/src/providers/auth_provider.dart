@@ -1,11 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../main.dart' show firebaseInitializedProvider;
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
 });
 
 final authStateProvider = StreamProvider<User?>((ref) {
+  final isReady = ref.watch(firebaseInitializedProvider);
+  if (!isReady) return Stream.value(null);
   return ref.watch(firebaseAuthProvider).authStateChanges();
 });
 

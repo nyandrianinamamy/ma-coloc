@@ -33,9 +33,19 @@ export const joinHouse = onCall(async (request) => {
   const houseRef = houseDoc.ref;
   const houseData = houseDoc.data();
 
-  // Check if already a member
+  // Check if already a member of this house
   if (houseData.members.includes(uid)) {
     return { houseId: houseRef.id };
+  }
+
+  // Enforce single-house membership — reject if user is in any other house
+  const existingHouses = await db
+    .collection("houses")
+    .where("members", "array-contains", uid)
+    .limit(1)
+    .get();
+  if (!existingHouses.empty) {
+    throw new HttpsError("already-exists", "You are already a member of a house. Leave it first.");
   }
 
   const now = Timestamp.now();

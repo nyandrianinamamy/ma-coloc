@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:macoloc/src/providers/auth_provider.dart';
+import 'package:macoloc/main.dart' show firebaseInitializedProvider;
 import 'auth_provider_test.mocks.dart';
 
 @GenerateMocks([FirebaseAuth, User, UserCredential])
@@ -16,6 +17,7 @@ void main() {
     container = ProviderContainer(
       overrides: [
         firebaseAuthProvider.overrideWithValue(mockAuth),
+        firebaseInitializedProvider.overrideWith((_) => true),
       ],
     );
   });
