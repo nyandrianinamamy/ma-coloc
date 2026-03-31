@@ -83,11 +83,6 @@ jobs:
       - name: Install chromedriver
         uses: nanasess/setup-chromedriver@v2
 
-      - name: Start Xvfb
-        run: |
-          Xvfb :99 -screen 0 1280x1024x24 &
-          sleep 2
-
       - name: Start chromedriver
         run: |
           chromedriver --port=4444 &
@@ -104,10 +99,10 @@ jobs:
           done
 
       - name: Run integration tests
-        env:
-          DISPLAY: ':99'
         run: |
           flutter drive \
             --driver=test_driver/integration_test.dart \
             --target=integration_test/issue_flow_test.dart \
-            -d chrome
+            -d web-server \
+            --browser-name=chrome \
+            --browser-dimension=1280,1024
