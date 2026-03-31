@@ -963,6 +963,29 @@ class _TimelineSection extends StatelessWidget {
       ));
     }
 
+    // Step: Closed (auto-closed after dispute window)
+    if (issue.status == IssueStatus.closed) {
+      // If there was a resolved step too, add it first
+      if (issue.resolvedBy != null) {
+        steps.add(_TimelineStep(
+          iconBg: AppColors.emerald,
+          icon: Icons.check,
+          iconColor: Colors.white,
+          title: 'Resolved',
+          subtitle: 'by Resolver',
+          isLast: false,
+        ));
+      }
+      steps.add(_TimelineStep(
+        iconBg: AppColors.slate400,
+        icon: Icons.lock_outline,
+        iconColor: Colors.white,
+        title: 'Closed',
+        subtitle: 'Auto-closed after dispute window',
+        isLast: true,
+      ));
+    }
+
     // Mark last step
     if (steps.isNotEmpty) {
       final lastIdx = steps.length - 1;
