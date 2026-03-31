@@ -8,12 +8,17 @@ import 'src/features/onboarding/house_choice_screen.dart';
 import 'src/features/onboarding/create_house_screen.dart';
 import 'src/features/onboarding/join_house_screen.dart';
 import 'src/features/onboarding/house_created_screen.dart';
+import 'src/features/shell/mobile_shell.dart';
+import 'src/features/home/home_screen.dart';
+
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final houseIdAsync = ref.watch(currentHouseIdProvider);
 
   return GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
     redirect: (context, state) {
       final isLoggedIn = authState.valueOrNull != null;
@@ -60,12 +65,83 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+
+      // Main shell with bottom tab bar
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            MobileShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/issues',
+                builder: (context, state) => const Scaffold(
+                  body: Center(child: Text('Issues — Coming Soon')),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/leaderboard',
+                builder: (context, state) => const Scaffold(
+                  body: Center(child: Text('Leaderboard — Coming Soon')),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const Scaffold(
+                  body: Center(child: Text('Profile — Coming Soon')),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // Sub-screens outside the shell (use root navigator)
       GoRoute(
-        path: '/home',
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/create',
         builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Home — Sprint 2')),
+          body: Center(child: Text('Create Issue — Coming Soon')),
         ),
       ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/issues/:id',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Issue Detail — Coming Soon')),
+        ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/settings',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Settings — Coming Soon')),
+        ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/clean',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Deep Clean — Coming Soon')),
+        ),
+      ),
+
       GoRoute(
         path: '/',
         redirect: (context, state) => '/sign-in',
