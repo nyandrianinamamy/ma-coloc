@@ -17,6 +17,8 @@ import 'src/features/issues/create_issue_screen.dart';
 import 'src/features/issues/issue_detail_screen.dart';
 import 'src/features/leaderboard/leaderboard_screen.dart';
 import 'src/features/profile/profile_screen.dart';
+import 'src/features/settings/settings_screen.dart';
+import 'src/features/deep_clean/deep_clean_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -139,16 +141,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/settings',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Settings — Coming Soon')),
-        ),
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/clean',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Deep Clean — Coming Soon')),
-        ),
+        builder: (context, state) => const DeepCleanScreen(),
       ),
 
       GoRoute(
