@@ -15,7 +15,7 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
-    }
+    },
     {
       "collectionGroup": "issues",
       "queryScope": "COLLECTION",
@@ -30,6 +30,14 @@
       "fields": [
         { "fieldPath": "presence", "order": "ASCENDING" },
         { "fieldPath": "presenceUpdatedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "closedAt", "order": "ASCENDING" }
       ]
     }
   ],
