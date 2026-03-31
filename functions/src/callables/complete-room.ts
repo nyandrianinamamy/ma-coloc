@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { evaluateNewBadges, MemberStatsSnapshot } from "../badges";
+import { sendNotification } from "../notifications";
 
 const DEEP_CLEAN_ROOM_POINTS = 5;
 
@@ -81,7 +82,21 @@ export const completeRoom = onCall(async (request) => {
     }
   });
 
-  // Badge evaluation (after transaction, read fresh stats)
+  // Check if all rooms completed (re-read after transaction)
+  const updatedClean = await cleanRef.get();
+  if (updatedClean.data()?.status === "completed") {
+    const memberSnap = await memberRef.get();
+    const displayName: string = memberSnap.data()?.displayName || "Unknown";
+    await db.collection(`houses/${houseId}/activity`).add({
+      type: "deepCleanDone",
+      uid,
+      displayName,
+      detail: "all_rooms",
+      createdAt: Timestamp.now(),
+    });
+  }
+
+  // Badge evaluation + activity writes + FCM
   const memberDoc = await memberRef.get();
   if (memberDoc.exists) {
     const memberData = memberDoc.data()!;
@@ -97,6 +112,23 @@ export const completeRoom = onCall(async (request) => {
       await memberRef.update({
         "stats.badges": FieldValue.arrayUnion(...newBadges),
       });
+
+      const displayName: string = memberData.displayName || "Unknown";
+      for (const badgeId of newBadges) {
+        await db.collection(`houses/${houseId}/activity`).add({
+          type: "badgeEarned",
+          uid,
+          displayName,
+          detail: badgeId,
+          createdAt: Timestamp.now(),
+        });
+        await sendNotification(
+          houseId,
+          uid,
+          "New Badge!",
+          `You earned the ${badgeId.replace(/_/g, " ")} badge!`,
+        );
+      }
     }
   }
 
