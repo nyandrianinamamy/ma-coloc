@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/issue.dart';
 import '../models/member.dart';
-import 'issue_provider.dart';
+import 'house_provider.dart';
 import 'member_provider.dart';
 
 class LeaderboardEntry {
@@ -38,8 +38,7 @@ List<LeaderboardEntry> computeLeaderboard({
   final pointsByUid = <String, int>{};
   for (final issue in closedIssues) {
     if (issue.resolvedBy == null) continue;
-    final closedAt =
-        (issue.autoCloseAt ?? issue.resolvedAt ?? issue.createdAt).toDate();
+    final closedAt = issue.closedAt?.toDate() ?? issue.autoCloseAt?.toDate() ?? issue.createdAt.toDate();
 
     if (!closedAt.isBefore(periodStart) && !closedAt.isAfter(now)) {
       pointsByUid[issue.resolvedBy!] =
@@ -78,13 +77,23 @@ class LeaderboardParams {
   int get hashCode => Object.hash(houseId, isWeekly);
 }
 
+final closedIssuesStreamProvider =
+    StreamProvider.family<List<Issue>, String>((ref, houseId) {
+  final db = ref.watch(firestoreProvider);
+  return db
+      .collection('houses/$houseId/issues')
+      .where('status', isEqualTo: 'closed')
+      .orderBy('closedAt', descending: true)
+      .limit(200)
+      .snapshots()
+      .map((snap) => snap.docs.map(Issue.fromFirestore).toList());
+});
+
 final leaderboardProvider =
     Provider.family<AsyncValue<List<LeaderboardEntry>>, LeaderboardParams>(
         (ref, params) {
   final membersAsync = ref.watch(membersStreamProvider(params.houseId));
-  final issuesAsync = ref.watch(issuesStreamProvider(
-    IssueQueryParams(houseId: params.houseId, tab: IssueTab.all),
-  ));
+  final issuesAsync = ref.watch(closedIssuesStreamProvider(params.houseId));
 
   return membersAsync.when(
     loading: () => const AsyncLoading(),
@@ -93,11 +102,9 @@ final leaderboardProvider =
       loading: () => const AsyncLoading(),
       error: (e, st) => AsyncError(e, st),
       data: (issues) {
-        final closedIssues =
-            issues.where((i) => i.status == IssueStatus.closed).toList();
         final entries = computeLeaderboard(
           members: members,
-          closedIssues: closedIssues,
+          closedIssues: issues,
           isWeekly: params.isWeekly,
           now: DateTime.now(),
         );

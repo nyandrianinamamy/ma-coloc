@@ -91,7 +91,7 @@ Issue _makeClosedIssue(String id, String resolvedBy, int points, DateTime closed
     createdAt: Timestamp.fromDate(closedAt.subtract(const Duration(days: 1))),
     status: IssueStatus.closed,
     resolvedBy: resolvedBy,
-    autoCloseAt: Timestamp.fromDate(closedAt),
+    closedAt: Timestamp.fromDate(closedAt),
     points: points,
   );
 }

@@ -54,7 +54,15 @@ export const autoCloseIssues = onSchedule("every day 02:00", async () => {
       }
     }
 
+    // Collect existing member UIDs to skip departed users
+    const existingMembers = new Set<string>();
+    const membersSnap = await db.collection(`houses/${house.id}/members`).get();
+    for (const m of membersSnap.docs) {
+      existingMembers.add(m.id);
+    }
+
     for (const [uid, delta] of resolverDeltas) {
+      if (!existingMembers.has(uid)) continue;  // skip departed members
       const memberRef = db.collection(`houses/${house.id}/members`).doc(uid);
       batch.update(memberRef, {
         "stats.totalPoints": FieldValue.increment(delta.points),
@@ -70,6 +78,7 @@ export const autoCloseIssues = onSchedule("every day 02:00", async () => {
     }
 
     for (const [uid, count] of creatorDeltas) {
+      if (!existingMembers.has(uid)) continue;  // skip departed members
       const memberRef = db.collection(`houses/${house.id}/members`).doc(uid);
       batch.update(memberRef, {
         "stats.issuesCreated": FieldValue.increment(count),
@@ -88,6 +97,7 @@ export const autoCloseIssues = onSchedule("every day 02:00", async () => {
     // Badge evaluation pass
     const affectedUids = new Set([...resolverDeltas.keys(), ...creatorDeltas.keys()]);
     for (const uid of affectedUids) {
+      if (!existingMembers.has(uid)) continue;  // skip departed members
       const memberDoc = await db
         .collection(`houses/${house.id}/members`)
         .doc(uid)

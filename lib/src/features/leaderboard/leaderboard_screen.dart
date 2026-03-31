@@ -128,8 +128,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   // Live body (real Firestore data)
   // ---------------------------------------------------------------------------
   Widget _buildLiveBody(BuildContext context, List<LeaderboardEntry> entries) {
-    final top3 = entries.take(3).toList();
-    final rest = entries.skip(3).toList();
+    final top3 = entries.length >= 3 ? entries.take(3).toList() : <LeaderboardEntry>[];
+    final rest = entries.length >= 3 ? entries.skip(3).toList() : entries;
 
     return CustomScrollView(
       slivers: [
