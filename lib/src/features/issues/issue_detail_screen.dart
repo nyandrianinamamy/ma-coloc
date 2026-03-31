@@ -412,12 +412,16 @@ class IssueDetailScreen extends ConsumerWidget {
                   ),
                   onPressed: () {
                     Navigator.of(ctx).pop();
+                    final house = ref.read(currentHouseProvider).valueOrNull;
+                    final windowHours =
+                        house?.settings.disputeWindowHours ?? 48;
                     ref.read(issueActionsProvider.notifier).resolve(
                           houseId: houseId,
                           issueId: issueId,
                           note: noteController.text.trim().isEmpty
                               ? null
                               : noteController.text.trim(),
+                          disputeWindowHours: windowHours,
                         );
                   },
                   child: const Text(
@@ -959,6 +963,29 @@ class _TimelineSection extends StatelessWidget {
         iconColor: Colors.white,
         title: 'Disputed',
         subtitle: 'by Reporter. "${issue.disputeReason ?? 'No reason given'}"',
+        isLast: true,
+      ));
+    }
+
+    // Step: Closed (auto-closed after dispute window)
+    if (issue.status == IssueStatus.closed) {
+      // If there was a resolved step too, add it first
+      if (issue.resolvedBy != null) {
+        steps.add(_TimelineStep(
+          iconBg: AppColors.emerald,
+          icon: Icons.check,
+          iconColor: Colors.white,
+          title: 'Resolved',
+          subtitle: 'by ${issue.resolvedBy ?? 'Assignee'}',
+          isLast: false,
+        ));
+      }
+      steps.add(_TimelineStep(
+        iconBg: AppColors.slate400,
+        icon: Icons.lock_outline,
+        iconColor: Colors.white,
+        title: 'Closed',
+        subtitle: 'Auto-closed after dispute window',
         isLast: true,
       ));
     }

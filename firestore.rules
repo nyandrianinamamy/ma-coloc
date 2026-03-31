@@ -57,7 +57,7 @@ service cloud.firestore {
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["assignedTo", "assignedAt", "status"]) &&
            request.resource.data.assignedTo == request.auth.uid) ||
           // Resolving: set resolvedBy to self
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["resolvedBy", "resolvedAt", "resolutionPhotoUrl", "resolutionNote", "status"]) &&
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["resolvedBy", "resolvedAt", "resolutionPhotoUrl", "resolutionNote", "status", "autoCloseAt"]) &&
            request.resource.data.resolvedBy == request.auth.uid) ||
           // Disputing: disputedBy must be self and not the resolver
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["disputedBy", "disputeAgainst", "disputeReason", "status"]) &&

@@ -206,6 +206,7 @@ class IssueActions extends Notifier<AsyncValue<void>> {
     required String issueId,
     String? note,
     XFile? resolutionPhoto,
+    int disputeWindowHours = 48,
   }) async {
     final uid = _uid;
     if (uid == null) throw StateError('Not authenticated');
@@ -220,12 +221,18 @@ class IssueActions extends Notifier<AsyncValue<void>> {
         );
       }
 
+      final now = Timestamp.now();
+      final autoCloseAt = Timestamp.fromMillisecondsSinceEpoch(
+        now.millisecondsSinceEpoch + (disputeWindowHours * 60 * 60 * 1000),
+      );
+
       await _issuesCol(houseId).doc(issueId).update({
         'resolvedBy': uid,
-        'resolvedAt': FieldValue.serverTimestamp(),
+        'resolvedAt': now,
         'resolutionNote': note,
         'resolutionPhotoUrl': resolutionPhotoUrl,
         'status': 'resolved',
+        'autoCloseAt': autoCloseAt,
       });
     });
   }

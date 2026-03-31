@@ -1,25 +1,33 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../../firebase_options.dart';
 import '../../mock/mock_data.dart';
+import '../../models/deep_clean.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/deep_clean_provider.dart';
+import '../../providers/house_provider.dart';
 import '../../theme/app_theme.dart';
 
-class DeepCleanScreen extends StatefulWidget {
+class DeepCleanScreen extends ConsumerStatefulWidget {
   const DeepCleanScreen({super.key});
 
   @override
-  State<DeepCleanScreen> createState() => _DeepCleanScreenState();
+  ConsumerState<DeepCleanScreen> createState() => _DeepCleanScreenState();
 }
 
-class _DeepCleanScreenState extends State<DeepCleanScreen> {
-  // Local mutable copy of rooms
-  late List<_RoomState> _rooms;
+class _DeepCleanScreenState extends ConsumerState<DeepCleanScreen> {
+  // Mock state for placeholder mode
+  late List<_MockRoom> _mockRooms;
 
   @override
   void initState() {
     super.initState();
-    _rooms = MockData.rooms
-        .map((r) => _RoomState(
+    _mockRooms = MockData.rooms
+        .map((r) => _MockRoom(
               id: r.id,
               name: r.name,
               status: r.status,
@@ -28,17 +36,17 @@ class _DeepCleanScreenState extends State<DeepCleanScreen> {
         .toList();
   }
 
-  double get _progressPercent {
-    if (_rooms.isEmpty) return 0;
-    final cleanCount = _rooms.where((r) => r.status == 'clean').length;
-    return cleanCount / _rooms.length;
+  double get _mockProgressPercent {
+    if (_mockRooms.isEmpty) return 0;
+    final cleanCount = _mockRooms.where((r) => r.status == 'clean').length;
+    return cleanCount / _mockRooms.length;
   }
 
-  void _claimRoom(String roomId) {
+  void _mockClaimRoom(String roomId) {
     setState(() {
-      final idx = _rooms.indexWhere((r) => r.id == roomId);
+      final idx = _mockRooms.indexWhere((r) => r.id == roomId);
       if (idx != -1) {
-        _rooms[idx] = _rooms[idx].copyWith(
+        _mockRooms[idx] = _mockRooms[idx].copyWith(
           status: 'assigned',
           assigneeId: MockData.currentUser.id,
         );
@@ -46,20 +54,58 @@ class _DeepCleanScreenState extends State<DeepCleanScreen> {
     });
   }
 
-  void _completeRoom(String roomId) {
+  void _mockCompleteRoom(String roomId) {
     setState(() {
-      final idx = _rooms.indexWhere((r) => r.id == roomId);
+      final idx = _mockRooms.indexWhere((r) => r.id == roomId);
       if (idx != -1) {
-        _rooms[idx] = _rooms[idx].copyWith(status: 'clean', assigneeId: null);
+        _mockRooms[idx] =
+            _mockRooms[idx].copyWith(status: 'clean', assigneeId: null);
       }
     });
   }
 
+  Widget get _loadingWidget => Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+
+  Widget get _errorWidget => Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(child: Text('Something went wrong')),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final progressPercent = _progressPercent;
-    final progressDisplay =
-        '${(progressPercent * 100).round()}%';
+    final isPlaceholder = kDebugMode && DefaultFirebaseOptions.isPlaceholder;
+    if (isPlaceholder) return _buildMockScreen(context);
+
+    final houseIdAsync = ref.watch(currentHouseIdProvider);
+    final houseId = houseIdAsync.valueOrNull;
+    if (houseId == null) return _loadingWidget;
+
+    final deepCleanAsync = ref.watch(currentDeepCleanProvider(houseId));
+    final currentUid = ref.watch(authStateProvider).valueOrNull?.uid;
+
+    return deepCleanAsync.when(
+      loading: () => _loadingWidget,
+      error: (e, _) => _errorWidget,
+      data: (deepClean) {
+        if (deepClean == null) return _buildEmptyState(context);
+        return _buildLiveScreen(
+          context,
+          deepClean: deepClean,
+          houseId: houseId,
+          currentUid: currentUid,
+        );
+      },
+    );
+  }
+
+  // ── Mock / placeholder screen ───────────────────────────────────────────────
+
+  Widget _buildMockScreen(BuildContext context) {
+    final progressPercent = _mockProgressPercent;
+    final progressDisplay = '${(progressPercent * 100).round()}%';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -68,8 +114,10 @@ class _DeepCleanScreenState extends State<DeepCleanScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _DeepCleanHeader(
+              title: 'March Deep Clean',
               progressDisplay: progressDisplay,
               progressPercent: progressPercent,
+              deadlineLabel: 'Sunday 5PM',
               onBack: () => context.pop(),
             ),
             const SizedBox(height: 28),
@@ -78,13 +126,13 @@ class _DeepCleanScreenState extends State<DeepCleanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _RoomAssignmentsHeader(totalRooms: _rooms.length),
+                  _RoomAssignmentsHeader(totalRooms: _mockRooms.length),
                   const SizedBox(height: 14),
-                  for (final room in _rooms) ...[
-                    _RoomCard(
+                  for (final room in _mockRooms) ...[
+                    _MockRoomCard(
                       room: room,
-                      onClaim: () => _claimRoom(room.id),
-                      onComplete: () => _completeRoom(room.id),
+                      onClaim: () => _mockClaimRoom(room.id),
+                      onComplete: () => _mockCompleteRoom(room.id),
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -97,12 +145,127 @@ class _DeepCleanScreenState extends State<DeepCleanScreen> {
       ),
     );
   }
+
+  // ── Live Firestore screen ───────────────────────────────────────────────────
+
+  Widget _buildLiveScreen(
+    BuildContext context, {
+    required DeepClean deepClean,
+    required String houseId,
+    required String? currentUid,
+  }) {
+    final monthDate = DateTime.parse('${deepClean.month}-01');
+    final title = '${DateFormat.MMMM().format(monthDate)} Deep Clean';
+    final deadlineLabel =
+        DateFormat('EEEE h:mma').format(deepClean.volunteerDeadline.toDate());
+
+    final totalRooms = deepClean.assignments.length;
+    final completedCount =
+        deepClean.assignments.values.where((a) => a.completed).length;
+    final progressPercent =
+        totalRooms == 0 ? 0.0 : completedCount / totalRooms;
+    final progressDisplay = '${(progressPercent * 100).round()}%';
+
+    final entries = deepClean.assignments.entries.toList();
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DeepCleanHeader(
+              title: title,
+              progressDisplay: progressDisplay,
+              progressPercent: progressPercent,
+              deadlineLabel: deadlineLabel,
+              onBack: () => context.pop(),
+            ),
+            const SizedBox(height: 28),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _RoomAssignmentsHeader(totalRooms: totalRooms),
+                  const SizedBox(height: 14),
+                  for (final entry in entries) ...[
+                    _LiveRoomCard(
+                      roomName: entry.key,
+                      assignment: entry.value,
+                      currentUid: currentUid,
+                      onClaim: () {
+                        ref
+                            .read(deepCleanActionsProvider.notifier)
+                            .claimRoom(
+                              houseId: houseId,
+                              cleanId: deepClean.id,
+                              roomName: entry.key,
+                            );
+                      },
+                      onComplete: () {
+                        ref
+                            .read(deepCleanActionsProvider.notifier)
+                            .completeRoom(
+                              houseId: houseId,
+                              cleanId: deepClean.id,
+                              roomName: entry.key,
+                            );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  const SizedBox(height: 28),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Empty state ─────────────────────────────────────────────────────────────
+
+  Widget _buildEmptyState(BuildContext context) {
+    final now = DateTime.now();
+    final title = '${DateFormat.MMMM().format(now)} Deep Clean';
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DeepCleanHeader(
+              title: title,
+              progressDisplay: '0%',
+              progressPercent: 0.0,
+              deadlineLabel: 'Not scheduled',
+              onBack: () => context.pop(),
+            ),
+            const SizedBox(height: 80),
+            const Center(
+              child: Text(
+                'No deep clean scheduled this month',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.slate500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-// ─── Data model ──────────────────────────────────────────────────────────────
+// ─── Mock room data model (placeholder mode only) ─────────────────────────────
 
-class _RoomState {
-  const _RoomState({
+class _MockRoom {
+  const _MockRoom({
     required this.id,
     required this.name,
     required this.status,
@@ -114,8 +277,8 @@ class _RoomState {
   final String status; // 'dirty' | 'clean' | 'assigned'
   final String? assigneeId;
 
-  _RoomState copyWith({String? status, String? assigneeId}) {
-    return _RoomState(
+  _MockRoom copyWith({String? status, String? assigneeId}) {
+    return _MockRoom(
       id: id,
       name: name,
       status: status ?? this.status,
@@ -128,13 +291,17 @@ class _RoomState {
 
 class _DeepCleanHeader extends StatelessWidget {
   const _DeepCleanHeader({
+    required this.title,
     required this.progressDisplay,
     required this.progressPercent,
+    required this.deadlineLabel,
     required this.onBack,
   });
 
+  final String title;
   final String progressDisplay;
   final double progressPercent;
+  final String deadlineLabel;
   final VoidCallback onBack;
 
   @override
@@ -181,9 +348,9 @@ class _DeepCleanHeader extends StatelessWidget {
                     color: Colors.white,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'March Deep Clean',
-                    style: TextStyle(
+                  Text(
+                    title,
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
@@ -250,9 +417,9 @@ class _DeepCleanHeader extends StatelessWidget {
                                 color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Text(
-                                'Sunday 5PM',
-                                style: TextStyle(
+                              child: Text(
+                                deadlineLabel,
+                                style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
@@ -338,16 +505,128 @@ class _RoomAssignmentsHeader extends StatelessWidget {
   }
 }
 
-// ─── Room Card ────────────────────────────────────────────────────────────────
+// ─── Live Room Card (Firestore-backed) ────────────────────────────────────────
 
-class _RoomCard extends StatelessWidget {
-  const _RoomCard({
+class _LiveRoomCard extends StatelessWidget {
+  const _LiveRoomCard({
+    required this.roomName,
+    required this.assignment,
+    required this.currentUid,
+    required this.onClaim,
+    required this.onComplete,
+  });
+
+  final String roomName;
+  final RoomAssignment assignment;
+  final String? currentUid;
+  final VoidCallback onClaim;
+  final VoidCallback onComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCompleted = assignment.completed;
+    final isAssignedToMe =
+        assignment.uid != null && assignment.uid == currentUid;
+    final isUnclaimed = assignment.uid == null;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.slate100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      roomName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.slate800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      '100 points',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.slate500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Status badge
+              if (isCompleted)
+                _StatusBadge(
+                  label: 'Done',
+                  bgColor: AppColors.emerald100,
+                  textColor: AppColors.emerald,
+                )
+              else if (isUnclaimed)
+                _StatusBadge(
+                  label: 'Unclaimed',
+                  bgColor: AppColors.orange100,
+                  textColor: AppColors.orange,
+                )
+              else
+                _StatusBadge(
+                  label: 'Assigned',
+                  bgColor: AppColors.blue100,
+                  textColor: AppColors.blue600,
+                ),
+            ],
+          ),
+          if (!isCompleted) ...[
+            const SizedBox(height: 14),
+            if (isAssignedToMe)
+              _ActionButton(
+                label: 'Mark as Spotless',
+                bgColor: AppColors.emerald,
+                textColor: Colors.white,
+                onTap: onComplete,
+              )
+            else if (isUnclaimed)
+              _ActionButton(
+                label: "I'll do it",
+                bgColor: Colors.white,
+                textColor: AppColors.slate700,
+                borderColor: AppColors.slate200,
+                onTap: onClaim,
+              )
+            else
+              _ActionButton(
+                label: 'Assigned to someone',
+                bgColor: AppColors.slate100,
+                textColor: AppColors.slate400,
+                onTap: null,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Mock Room Card (placeholder mode only) ───────────────────────────────────
+
+class _MockRoomCard extends StatelessWidget {
+  const _MockRoomCard({
     required this.room,
     required this.onClaim,
     required this.onComplete,
   });
 
-  final _RoomState room;
+  final _MockRoom room;
   final VoidCallback onClaim;
   final VoidCallback onComplete;
 
@@ -361,9 +640,8 @@ class _RoomCard extends StatelessWidget {
         room.status == 'assigned' && room.assigneeId != currentUserId;
     final isUnclaimed = room.status == 'dirty';
 
-    final assignee = room.assigneeId != null
-        ? MockData.userById(room.assigneeId!)
-        : null;
+    final assignee =
+        room.assigneeId != null ? MockData.userById(room.assigneeId!) : null;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -456,6 +734,8 @@ class _RoomCard extends StatelessWidget {
     );
   }
 }
+
+// ─── Shared visual widgets ────────────────────────────────────────────────────
 
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({
@@ -553,9 +833,7 @@ class _ActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(12),
-          border: borderColor != null
-              ? Border.all(color: borderColor!)
-              : null,
+          border: borderColor != null ? Border.all(color: borderColor!) : null,
         ),
         child: Text(
           label,
