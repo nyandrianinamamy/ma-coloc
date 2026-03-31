@@ -6,8 +6,11 @@ import 'package:go_router/go_router.dart';
 import '../../../firebase_options.dart';
 import '../../mock/mock_data.dart';
 import '../../models/member.dart';
+import '../../providers/activity_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/deep_clean_provider.dart';
 import '../../providers/house_provider.dart';
+import '../../providers/leaderboard_provider.dart';
 import '../../providers/member_provider.dart';
 import '../../theme/app_theme.dart';
 
@@ -58,6 +61,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final homeMembers =
             members.where((m) => m.presence == Presence.home).toList();
 
+        // Activity feed
+        final activityFeedAsync = ref.watch(activityFeedProvider(houseId));
+        final liveActivities = activityFeedAsync.valueOrNull ?? [];
+
+        // Momentum: count issues closed this ISO week
+        final closedIssuesAsync =
+            ref.watch(closedIssuesStreamProvider(houseId));
+        final closedIssues = closedIssuesAsync.valueOrNull ?? [];
+        final now = DateTime.now();
+        final weekStart = DateTime(now.year, now.month, now.day)
+            .subtract(Duration(days: now.weekday - 1));
+        final weeklyCount = closedIssues
+            .where((i) =>
+                i.closedAt != null &&
+                !i.closedAt!.toDate().isBefore(weekStart))
+            .length;
+
+        // Deep clean: count unclaimed rooms
+        final deepCleanAsync =
+            ref.watch(currentDeepCleanProvider(houseId));
+        final deepClean = deepCleanAsync.valueOrNull;
+        final unclaimedCount = deepClean == null
+            ? 0
+            : deepClean.assignments.values
+                .where((a) => a.uid == null)
+                .length;
+
         return _buildScaffold(
           context: context,
           houseName: house?.name ?? 'My House',
@@ -73,6 +103,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             members: members,
             homeCount: homeMembers.length,
           ),
+          liveActivities: liveActivities,
+          resolvedCount: weeklyCount,
+          unclaimedCount: unclaimedCount,
         );
       },
     );
@@ -99,8 +132,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required bool isHome,
     required ValueChanged<bool> onPresenceChanged,
     required Widget whosAround,
+    // Live-mode data (null → use mock fallback)
+    List<ActivityItem>? liveActivities,
+    int? resolvedCount,
+    int? unclaimedCount,
   }) {
-    final activities = MockData.activities;
+    final mockActivities = MockData.activities;
+    final isLiveMode = liveActivities != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -153,9 +191,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
               child: _MomentumCard(
                 onLeaderboardTap: () => context.go('/leaderboard'),
+                resolvedCount: resolvedCount,
               ),
             ),
           ),
+
+          // Volunteer nudge (live mode only, when unclaimed rooms exist)
+          if (isLiveMode && (unclaimedCount ?? 0) > 0)
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.orange100,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: AppColors.orange.withValues(alpha: 0.3)),
+                ),
+                child: GestureDetector(
+                  onTap: () => context.go('/clean'),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cleaning_services_rounded,
+                          color: AppColors.orange, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '$unclaimedCount rooms unclaimed — volunteer!',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.orange,
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded,
+                          color: AppColors.orange, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
           // Activity header
           SliverToBoxAdapter(
@@ -185,19 +261,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
 
-          // Activity feed (stays mock)
-          SliverPadding(
-            padding: const EdgeInsets.only(top: 16),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _ActivityItem(
-                  activity: activities[index],
-                  isLast: index == activities.length - 1,
+          // Activity feed
+          if (isLiveMode)
+            SliverPadding(
+              padding: const EdgeInsets.only(top: 16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _LiveActivityItem(
+                    activity: liveActivities[index],
+                    isLast: index == liveActivities.length - 1,
+                  ),
+                  childCount: liveActivities.length,
                 ),
-                childCount: activities.length,
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.only(top: 16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _ActivityItem(
+                    activity: mockActivities[index],
+                    isLast: index == mockActivities.length - 1,
+                  ),
+                  childCount: mockActivities.length,
+                ),
               ),
             ),
-          ),
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
@@ -649,9 +739,25 @@ class _MockAvatarItem extends StatelessWidget {
 // Momentum Card
 // ---------------------------------------------------------------------------
 class _MomentumCard extends StatelessWidget {
-  const _MomentumCard({required this.onLeaderboardTap});
+  const _MomentumCard({
+    required this.onLeaderboardTap,
+    this.resolvedCount,
+  });
 
   final VoidCallback onLeaderboardTap;
+  final int? resolvedCount;
+
+  String get _title {
+    if (resolvedCount == null) return 'House on fire!';
+    if (resolvedCount! >= 5) return 'House on fire!';
+    if (resolvedCount! > 0) return 'Keep it up!';
+    return 'Get started!';
+  }
+
+  String get _body {
+    if (resolvedCount != null) return momentumText(resolvedCount!);
+    return 'Your house resolved 12 issues this week. Keep up the momentum!';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -690,9 +796,9 @@ class _MomentumCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'House on fire!',
-                style: TextStyle(
+              Text(
+                _title,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -702,7 +808,7 @@ class _MomentumCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Your house resolved 12 issues this week. Keep up the momentum!',
+            _body,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.85),
               fontSize: 14,
@@ -902,6 +1008,199 @@ class _ActivityItem extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               '+$_points pts',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.emerald,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Activity Feed Item — Live (Firestore)
+// ---------------------------------------------------------------------------
+class _LiveActivityItem extends StatelessWidget {
+  const _LiveActivityItem({
+    required this.activity,
+    required this.isLast,
+  });
+
+  final ActivityItem activity;
+  final bool isLast;
+
+  Color get _dotColor {
+    switch (activity.type) {
+      case 'created':
+        return AppColors.orange;
+      case 'resolved':
+        return AppColors.emerald;
+      case 'badgeEarned':
+        return AppColors.yellow400;
+      case 'streakMilestone':
+        return AppColors.blue;
+      case 'deepCleanDone':
+        return AppColors.teal;
+      default:
+        return AppColors.slate400;
+    }
+  }
+
+  IconData get _dotIcon {
+    switch (activity.type) {
+      case 'created':
+        return Icons.error_outline;
+      case 'resolved':
+        return Icons.check_circle_outline;
+      case 'badgeEarned':
+        return Icons.emoji_events;
+      case 'streakMilestone':
+        return Icons.local_fire_department;
+      case 'deepCleanDone':
+        return Icons.cleaning_services;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
+  String get _verb {
+    switch (activity.type) {
+      case 'created':
+        return ' flagged an issue: ';
+      case 'resolved':
+        return ' resolved ';
+      case 'badgeEarned':
+        return ' earned a badge: ';
+      case 'streakMilestone':
+        return ' hit a streak: ';
+      case 'deepCleanDone':
+        return ' completed deep clean: ';
+      default:
+        return ' ${activity.type} ';
+    }
+  }
+
+  String _formatTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: activity.issueId != null
+          ? () => context.push('/issues/${activity.issueId}')
+          : null,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Timeline column
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 0, 0),
+              child: Column(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _dotColor.withValues(alpha: 0.12),
+                    ),
+                    child: Icon(_dotIcon, color: _dotColor, size: 18),
+                  ),
+                  if (!isLast)
+                    Expanded(
+                      child: Container(
+                        width: 2,
+                        color: AppColors.slate200,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Card
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 16, 12),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textPrimary,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: activity.userName.split(' ').first,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary),
+                                  ),
+                                  TextSpan(
+                                    text: _verb,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w400,
+                                        color: AppColors.textSecondary),
+                                  ),
+                                  TextSpan(
+                                    text: '"${activity.detail}"',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            _formatTime(activity.timestamp),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textTertiary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (activity.points != null &&
+                              activity.points! > 0) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '+${activity.points} pts',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
