@@ -97,4 +97,4 @@ jobs:
           done
 
       - name: Run integration tests
-        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/issue_flow_test.dart -d chrome --headless
+        run: xvfb-run flutter drive --driver=test_driver/integration_test.dart --target=integration_test/issue_flow_test.dart -d chrome
