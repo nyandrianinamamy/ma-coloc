@@ -47,6 +47,13 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "closedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "activity",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
