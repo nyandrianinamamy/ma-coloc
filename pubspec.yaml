@@ -51,6 +51,7 @@ dependencies:
   google_fonts: ^6.2.1
   cached_network_image: ^3.4.1
   timeago: ^3.7.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
