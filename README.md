@@ -197,10 +197,10 @@ Single-house enforcement: callables reject if user already belongs to a house.
 |--------|-------|--------|
 | 1 | Foundation: scaffold, models, Firebase auth, onboarding, Cloud Functions | Done |
 | 2 | UI Shell: all 9 screens with mock data, bottom nav, GoRouter, design system | Done |
-| 3 | Issue system: Firestore CRUD, photo upload, real-time streams, issue lifecycle | Planned |
-| 4 | Cloud Functions: auto-close, presence reset, deep clean scheduling | Planned |
+| 3 | Issue system: Firestore CRUD, photo upload, real-time streams, issue lifecycle | Done |
+| 4 | Cloud Functions: auto-close, presence, deep clean + client wiring | Done |
 | 5 | Gamification: points engine, badges, streaks, live leaderboard | Planned |
-| 6 | Polish: notifications, presence toggle, settings mutations, onboarding → shell | Planned |
+| 6 | Polish: notifications, settings mutations, activity feed, volunteer flow | Planned |
 
 > **Note:** Sprint 2 built all UI screens (Home, Issues, Create Issue, Issue Detail, Leaderboard, Profile, Settings, Deep Clean) against hardcoded mock data. Sprints 3–6 progressively wire real data and backend logic behind these screens.
 
