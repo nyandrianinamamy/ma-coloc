@@ -1,6 +1,7 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { evaluateNewBadges, MemberStatsSnapshot } from "../badges";
+import { sendNotification } from "../notifications";
 
 export const autoCloseIssues = onSchedule("every day 02:00", async () => {
   const db = getFirestore();
@@ -94,10 +95,10 @@ export const autoCloseIssues = onSchedule("every day 02:00", async () => {
 
     if (opCount > 0) await batch.commit();
 
-    // Badge evaluation pass
+    // Badge evaluation pass + activity writes + FCM notifications
     const affectedUids = new Set([...resolverDeltas.keys(), ...creatorDeltas.keys()]);
     for (const uid of affectedUids) {
-      if (!existingMembers.has(uid)) continue;  // skip departed members
+      if (!existingMembers.has(uid)) continue;
       const memberDoc = await db
         .collection(`houses/${house.id}/members`)
         .doc(uid)
@@ -118,6 +119,24 @@ export const autoCloseIssues = onSchedule("every day 02:00", async () => {
         await memberDoc.ref.update({
           "stats.badges": FieldValue.arrayUnion(...newBadges),
         });
+
+        const displayName: string = memberData.displayName || "Unknown";
+        for (const badgeId of newBadges) {
+          await db.collection(`houses/${house.id}/activity`).add({
+            type: "badgeEarned",
+            uid,
+            displayName,
+            detail: badgeId,
+            createdAt: now,
+          });
+
+          await sendNotification(
+            house.id,
+            uid,
+            "New Badge!",
+            `You earned the ${badgeId.replace(/_/g, " ")} badge!`,
+          );
+        }
       }
     }
   }
