@@ -52,4 +52,20 @@ jobs:
       - name: Build
         run: npm run build
 
+  deploy-indexes:
+    name: Deploy Firestore Indexes
+    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    needs: [flutter, functions]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy Firestore indexes
+        run: firebase deploy --only firestore:indexes --project ma-coloc-87f1b
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
   # Integration tests are now in e2e.yml workflow
