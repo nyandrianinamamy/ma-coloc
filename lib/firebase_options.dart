@@ -6,10 +6,10 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 
 class DefaultFirebaseOptions {
   /// Returns true when credentials are still placeholders.
-  /// Web returns false because the demo-macoloc config is used for E2E tests
-  /// against emulators. When real web credentials are added via
+  /// Web and emulator configs return false because the demo-macoloc config is
+  /// used for E2E tests. When real credentials are added via
   /// `flutterfire configure`, this file will be regenerated.
-  static bool get isPlaceholder => !kIsWeb && android.apiKey == 'TODO';
+  static bool get isPlaceholder => currentPlatform.projectId != 'demo-macoloc' && android.apiKey == 'TODO';
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) return web;
@@ -17,7 +17,8 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        return ios;
+        // Use emulator config when real credentials aren't configured yet
+        return ios.apiKey == 'TODO' ? iosEmulator : ios;
       default:
         return web;
     }
@@ -47,5 +48,16 @@ class DefaultFirebaseOptions {
     projectId: 'macoloc-app',
     storageBucket: 'macoloc-app.firebasestorage.app',
     iosBundleId: 'com.macoloc.macoloc',
+  );
+
+  /// iOS emulator-only config for E2E tests with demo-macoloc project.
+  /// API key must start with 'AIzaSy' to pass native SDK format validation.
+  static const FirebaseOptions iosEmulator = FirebaseOptions(
+    apiKey: 'AIzaSyDemoKeyForEmulatorTestingOnly0000',
+    appId: '1:000000000000:ios:0000000000000000',
+    messagingSenderId: '000000000000',
+    projectId: 'demo-macoloc',
+    storageBucket: 'demo-macoloc.appspot.com',
+    iosBundleId: 'dev.mamy-r.macoloc',
   );
 }

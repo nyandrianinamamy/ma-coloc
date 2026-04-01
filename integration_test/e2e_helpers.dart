@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:http/http.dart' as http;
 import 'package:macoloc/app.dart';
 import 'package:macoloc/main.dart' show firebaseInitializedProvider;
@@ -23,9 +24,13 @@ bool _firebaseInitialized = false;
 Future<void> initFirebaseForTest() async {
   if (_firebaseInitialized) return;
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.web,
-  );
+  final options = kIsWeb
+      ? DefaultFirebaseOptions.web
+      : (defaultTargetPlatform == TargetPlatform.iOS
+          ? DefaultFirebaseOptions.iosEmulator
+          : DefaultFirebaseOptions.web);
+
+  await Firebase.initializeApp(options: options);
 
   // Connect all services to emulators
   await FirebaseAuth.instance.useAuthEmulator(_firestoreHost, _authPort);
