@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'house.dart' show TimestampConverter;
+import 'issue.dart' show NullableTimestampConverter;
 
 part 'member.freezed.dart';
 part 'member.g.dart';
@@ -37,7 +38,7 @@ class Member with _$Member {
     @TimestampConverter() required Timestamp joinedAt,
     @Default(MemberRole.member) MemberRole role,
     @Default(Presence.away) Presence presence,
-    @TimestampConverter() required Timestamp presenceUpdatedAt,
+    @NullableTimestampConverter() Timestamp? presenceUpdatedAt,
     @Default(MemberStats()) MemberStats stats,
     String? fcmToken,
     @Default(true) bool notificationsEnabled,
