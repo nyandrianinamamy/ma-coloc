@@ -6,10 +6,10 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 
 class DefaultFirebaseOptions {
   /// Returns true when credentials are still placeholders.
-  /// Web returns false because the demo-macoloc config is used for E2E tests
-  /// against emulators. When real web credentials are added via
+  /// Web and emulator configs return false because the demo-macoloc config is
+  /// used for E2E tests. When real credentials are added via
   /// `flutterfire configure`, this file will be regenerated.
-  static bool get isPlaceholder => !kIsWeb && android.apiKey == 'TODO';
+  static bool get isPlaceholder => false;
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) return web;
@@ -17,35 +17,48 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        return ios;
+        // Use emulator config when real credentials aren't configured yet
+        return ios.apiKey == 'TODO' ? iosEmulator : ios;
       default:
         return web;
     }
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'fake-api-key',
-    appId: '1:000000000000:web:0000000000000000',
-    messagingSenderId: '000000000000',
-    projectId: 'demo-macoloc',
-    storageBucket: 'demo-macoloc.appspot.com',
-    authDomain: 'demo-macoloc.firebaseapp.com',
+    apiKey: 'AIzaSyDOu5kEpFSgP8Imft3WtW7trtBuypk3GfQ',
+    appId: '1:53644947761:web:504f8e123eaaec09c3c010',
+    messagingSenderId: '53644947761',
+    projectId: 'ma-coloc-87f1b',
+    authDomain: 'ma-coloc-87f1b.firebaseapp.com',
+    storageBucket: 'ma-coloc-87f1b.firebasestorage.app',
+    measurementId: 'G-6YFR0YKNP9',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'TODO',
-    appId: 'TODO',
-    messagingSenderId: 'TODO',
-    projectId: 'macoloc-app',
-    storageBucket: 'macoloc-app.firebasestorage.app',
+    apiKey: 'AIzaSyDTG-8UKWIRen5LLGjrmn_wFn47WeYUNT8',
+    appId: '1:53644947761:android:49fc8b4763ec54d6c3c010',
+    messagingSenderId: '53644947761',
+    projectId: 'ma-coloc-87f1b',
+    storageBucket: 'ma-coloc-87f1b.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'TODO',
-    appId: 'TODO',
-    messagingSenderId: 'TODO',
-    projectId: 'macoloc-app',
-    storageBucket: 'macoloc-app.firebasestorage.app',
-    iosBundleId: 'com.macoloc.macoloc',
+    apiKey: 'AIzaSyDGrn8ZOStH6oNUSgkR_v1K9-hvlMXhLew',
+    appId: '1:53644947761:ios:4cc533d7b1d8f582c3c010',
+    messagingSenderId: '53644947761',
+    projectId: 'ma-coloc-87f1b',
+    storageBucket: 'ma-coloc-87f1b.firebasestorage.app',
+    iosBundleId: 'dev.mamy-r.macoloc',
+  );
+
+  /// iOS emulator-only config for E2E tests with demo-macoloc project.
+  /// API key must start with 'AIzaSy' to pass native SDK format validation.
+  static const FirebaseOptions iosEmulator = FirebaseOptions(
+    apiKey: 'AIzaSyDemoKeyForEmulatorTestingOnly0000',
+    appId: '1:000000000000:ios:0000000000000000',
+    messagingSenderId: '000000000000',
+    projectId: 'demo-macoloc',
+    storageBucket: 'demo-macoloc.appspot.com',
+    iosBundleId: 'dev.mamy-r.macoloc',
   );
 }

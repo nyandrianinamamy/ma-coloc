@@ -17,7 +17,11 @@ service cloud.firestore {
 
     match /houses/{houseId} {
       // Any member can read the house document
-      allow read: if isMember(houseId);
+      // list: allow queries where members array-contains the caller's uid
+      // get: allow if the caller is a member of the house
+      allow list: if request.auth != null &&
+        request.auth.uid in resource.data.members;
+      allow get: if isMember(houseId);
 
       // House creation is handled by createHouse callable — deny client writes
       allow create: if false;

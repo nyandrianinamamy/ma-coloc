@@ -25,7 +25,11 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    if (kDebugMode || _forceEmulators) {
+    // Only connect to emulators for demo-macoloc (E2E tests) or when forced.
+    final useEmulators = _forceEmulators ||
+        (kDebugMode &&
+            DefaultFirebaseOptions.currentPlatform.projectId == 'demo-macoloc');
+    if (useEmulators) {
       await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
       FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
       FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
