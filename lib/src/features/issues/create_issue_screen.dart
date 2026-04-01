@@ -119,7 +119,7 @@ class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
 // Phase 1 — Camera View
 // ---------------------------------------------------------------------------
 
-class _CameraView extends StatelessWidget {
+class _CameraView extends StatefulWidget {
   const _CameraView({
     super.key,
     required this.onClose,
@@ -128,6 +128,28 @@ class _CameraView extends StatelessWidget {
 
   final VoidCallback onClose;
   final ValueChanged<XFile> onPhotoPicked;
+
+  @override
+  State<_CameraView> createState() => _CameraViewState();
+}
+
+class _CameraViewState extends State<_CameraView> {
+  bool _cameraLaunched = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-launch camera when the view appears
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_cameraLaunched) {
+        _cameraLaunched = true;
+        _pickImage(ImageSource.camera, context);
+      }
+    });
+  }
+
+  VoidCallback get onClose => widget.onClose;
+  ValueChanged<XFile> get onPhotoPicked => widget.onPhotoPicked;
 
   Future<void> _pickImage(ImageSource source, BuildContext context) async {
     try {
@@ -158,62 +180,36 @@ class _CameraView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final viewfinderWidth = screenSize.width * 0.8;
-    final viewfinderHeight = screenSize.height * 0.5;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
-            // Full-screen dark placeholder for camera
+            // Dark background while camera picker is open
             Positioned.fill(
               child: Container(color: const Color(0xFF0A0A0A)),
             ),
 
-            // Center viewfinder guide
+            // Center instruction
             Center(
-              child: SizedBox(
-                width: viewfinderWidth,
-                height: viewfinderHeight,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Rounded rectangle border guide
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          width: 2,
-                        ),
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.camera_alt_outlined,
+                    color: Colors.white.withValues(alpha: 0.5),
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Take a photo of the issue',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
-                    // Camera icon + label
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.camera_alt_outlined,
-                          color: Colors.white.withValues(alpha: 0.7),
-                          size: 40,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Point at the mess or\nbroken thing',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
 
@@ -227,7 +223,6 @@ class _CameraView extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   children: [
-                    // Close button
                     GestureDetector(
                       onTap: onClose,
                       child: Container(
@@ -245,7 +240,6 @@ class _CameraView extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    // "NEW ISSUE" label
                     const Text(
                       'NEW ISSUE',
                       style: TextStyle(
@@ -256,7 +250,6 @@ class _CameraView extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    // Invisible placeholder to balance the close button
                     const SizedBox(width: 40),
                   ],
                 ),
