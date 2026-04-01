@@ -20,6 +20,19 @@ final membersStreamProvider =
 });
 
 // ---------------------------------------------------------------------------
+// UID → display name lookup
+// ---------------------------------------------------------------------------
+
+final memberDisplayNameProvider =
+    Provider.family<String, (String houseId, String uid)>((ref, args) {
+  final (houseId, uid) = args;
+  final members = ref.watch(membersStreamProvider(houseId)).valueOrNull ?? [];
+  final match = members.where((m) => m.uid == uid);
+  if (match.isNotEmpty) return match.first.displayName;
+  return uid.length > 8 ? '${uid.substring(0, 8)}…' : uid;
+});
+
+// ---------------------------------------------------------------------------
 // Presence actions
 // ---------------------------------------------------------------------------
 

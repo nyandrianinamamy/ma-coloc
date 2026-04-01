@@ -12,6 +12,7 @@ import '../../models/issue.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/house_provider.dart';
 import '../../providers/issue_provider.dart';
+import '../../providers/member_provider.dart';
 import '../../theme/app_theme.dart';
 
 class IssueDetailScreen extends ConsumerWidget {
@@ -19,86 +20,21 @@ class IssueDetailScreen extends ConsumerWidget {
 
   final String issueId;
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  Color _typeColor(IssueType type) {
-    switch (type) {
-      case IssueType.chore:
-        return AppColors.orange;
-      case IssueType.grocery:
-        return AppColors.emerald;
-      case IssueType.repair:
-        return AppColors.blue;
-      case IssueType.other:
-        return AppColors.indigo;
-    }
-  }
-
-  IconData _typeIcon(IssueType type) {
-    switch (type) {
-      case IssueType.chore:
-        return Icons.cleaning_services_outlined;
-      case IssueType.grocery:
-        return Icons.shopping_cart_outlined;
-      case IssueType.repair:
-        return Icons.build_outlined;
-      case IssueType.other:
-        return Icons.category_outlined;
-    }
-  }
-
-  ({
-    Color color,
-    Color dotColor,
-    IconData iconData,
-    String label,
-  }) _statusConfig(IssueStatus status) {
+  ({Color color, String label}) _statusConfig(IssueStatus status) {
     switch (status) {
       case IssueStatus.open:
-        return (
-          color: AppColors.orange,
-          dotColor: AppColors.orange,
-          iconData: Icons.radio_button_unchecked,
-          label: 'OPEN',
-        );
+        return (color: AppColors.orange, label: 'OPEN');
       case IssueStatus.inProgress:
-        return (
-          color: AppColors.blue,
-          dotColor: AppColors.blue,
-          iconData: Icons.autorenew,
-          label: 'IN PROGRESS',
-        );
+        return (color: AppColors.blue, label: 'IN PROGRESS');
       case IssueStatus.resolved:
-        return (
-          color: AppColors.emerald,
-          dotColor: AppColors.emerald,
-          iconData: Icons.check_circle_outline,
-          label: 'RESOLVED',
-        );
+        return (color: AppColors.emerald, label: 'RESOLVED');
       case IssueStatus.disputed:
-        return (
-          color: AppColors.rose,
-          dotColor: AppColors.rose,
-          iconData: Icons.chat_bubble_outline,
-          label: 'DISPUTED',
-        );
+        return (color: AppColors.rose, label: 'DISPUTED');
       case IssueStatus.closed:
-        return (
-          color: AppColors.slate400,
-          dotColor: AppColors.slate400,
-          iconData: Icons.lock_outline,
-          label: 'CLOSED',
-        );
+        return (color: AppColors.slate400, label: 'CLOSED');
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
-  /// Converts a [MockIssue] to an [Issue] for placeholder mode.
   static Issue? _mockIssueById(String id) {
     final match = MockData.issues.where((m) => m.id == id).toList();
     if (match.isEmpty) return null;
@@ -144,8 +80,7 @@ class IssueDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isPlaceholder =
-        kDebugMode && DefaultFirebaseOptions.isPlaceholder;
+    final isPlaceholder = kDebugMode && DefaultFirebaseOptions.isPlaceholder;
 
     final String houseId;
     final String? currentUid;
@@ -156,19 +91,12 @@ class IssueDetailScreen extends ConsumerWidget {
       currentUid = null;
       issue = _mockIssueById(issueId);
     } else {
-      final houseIdValue =
-          ref.watch(currentHouseIdProvider).valueOrNull;
+      final houseIdValue = ref.watch(currentHouseIdProvider).valueOrNull;
       currentUid = ref.watch(authStateProvider).valueOrNull?.uid;
 
       if (houseIdValue == null) {
         return Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () => context.pop(),
-            ),
-          ),
+          backgroundColor: const Color(0xFFFAFAF7),
           body: const Center(child: CircularProgressIndicator()),
         );
       }
@@ -176,47 +104,29 @@ class IssueDetailScreen extends ConsumerWidget {
     }
 
     if (isPlaceholder) {
-      return _buildDetail(
-        context,
-        ref,
-        issue: issue,
-        houseId: houseId,
-        currentUid: currentUid,
-        isPlaceholder: true,
-      );
+      return _buildDetail(context, ref,
+          issue: issue,
+          houseId: houseId,
+          currentUid: currentUid,
+          isPlaceholder: true);
     }
 
     final issueAsync = ref.watch(issueDetailProvider((houseId, issueId)));
 
     return issueAsync.when(
       loading: () => Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () => context.pop(),
-          ),
-        ),
+        backgroundColor: const Color(0xFFFAFAF7),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () => context.pop(),
-          ),
-        ),
+        backgroundColor: const Color(0xFFFAFAF7),
         body: Center(child: Text('Error: $e')),
       ),
-      data: (loadedIssue) => _buildDetail(
-        context,
-        ref,
-        issue: loadedIssue,
-        houseId: houseId,
-        currentUid: currentUid,
-        isPlaceholder: false,
-      ),
+      data: (loadedIssue) => _buildDetail(context, ref,
+          issue: loadedIssue,
+          houseId: houseId,
+          currentUid: currentUid,
+          isPlaceholder: false),
     );
   }
 
@@ -230,7 +140,7 @@ class IssueDetailScreen extends ConsumerWidget {
   }) {
     if (issue == null) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFFAFAF7),
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.chevron_left),
@@ -242,67 +152,98 @@ class IssueDetailScreen extends ConsumerWidget {
     }
 
     final status = _statusConfig(issue.status);
-    final typeColor = _typeColor(issue.type);
-    final typeIcon = _typeIcon(issue.type);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true,
+      backgroundColor: const Color(0xFFFAFAF7),
       body: Stack(
         children: [
-          // Scrollable content
           CustomScrollView(
             slivers: [
-              // ----------------------------------------------------------------
-              // Photo Header
-              // ----------------------------------------------------------------
+              // ── Sticky white header ──
               SliverToBoxAdapter(
-                child: _PhotoHeader(
+                child: _StickyHeader(
                   issue: issue,
-                  typeColor: typeColor,
-                  typeIcon: typeIcon,
                   status: status,
                   onBack: () => context.pop(),
                 ),
               ),
 
-              // ----------------------------------------------------------------
-              // Content
-              // ----------------------------------------------------------------
+              // ── Content ──
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    // Author / Assignee card
-                    _AuthorAssigneeCard(
-                      createdBy: issue.createdBy,
-                      anonymous: issue.anonymous,
-                      assignedTo: issue.assignedTo,
-                      createdAt: issue.createdAt,
+                    // Photo
+                    if (issue.photoUrl != null && issue.photoUrl!.isNotEmpty)
+                      _PhotoCard(photoUrl: issue.photoUrl!),
+                    if (issue.photoUrl != null && issue.photoUrl!.isNotEmpty)
+                      const SizedBox(height: 24),
+
+                    // Author / Assignee
+                    _MetaCard(
+                      issue: issue,
+                      houseId: houseId,
+                      isPlaceholder: isPlaceholder,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
                     // Description
-                    const _SectionLabel(label: 'DESCRIPTION'),
-                    const SizedBox(height: 8),
-                    _DescriptionCard(
-                      description: issue.description ?? '—',
-                    ),
-                    const SizedBox(height: 20),
+                    if (issue.description != null &&
+                        issue.description!.isNotEmpty) ...[
+                      Text(
+                        'DESCRIPTION',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.slate800,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.slate100),
+                        ),
+                        child: Text(
+                          issue.description!,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.slate500,
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
 
                     // Timeline
-                    const _SectionLabel(label: 'TIMELINE'),
-                    const SizedBox(height: 8),
-                    _TimelineSection(issue: issue),
+                    Text(
+                      'TIMELINE',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.slate800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _TimelineSection(
+                      issue: issue,
+                      houseId: houseId,
+                      isPlaceholder: isPlaceholder,
+                    ),
                   ]),
                 ),
               ),
             ],
           ),
 
-          // ----------------------------------------------------------------
-          // Bottom action bar (fixed)
-          // ----------------------------------------------------------------
+          // ── Bottom action bar ──
           Positioned(
             left: 0,
             right: 0,
@@ -312,37 +253,21 @@ class IssueDetailScreen extends ConsumerWidget {
               currentUid: currentUid,
               onClaim: isPlaceholder
                   ? () {}
-                  : () {
-                      ref
-                          .read(issueActionsProvider.notifier)
-                          .claim(houseId: houseId, issueId: issueId);
-                    },
+                  : () => ref
+                      .read(issueActionsProvider.notifier)
+                      .claim(houseId: houseId, issueId: issueId),
               onResolve: isPlaceholder
                   ? () {}
-                  : () => _showResolveSheet(
-                        context,
-                        ref,
-                        houseId: houseId,
-                        issueId: issueId,
-                      ),
+                  : () => _showResolveSheet(context, ref,
+                      houseId: houseId, issueId: issueId),
               onDispute: isPlaceholder
                   ? () {}
-                  : () => _showDisputeDialog(
-                        context,
-                        ref,
-                        houseId: houseId,
-                        issueId: issueId,
-                        issue: issue,
-                      ),
+                  : () => _showDisputeDialog(context, ref,
+                      houseId: houseId, issueId: issueId, issue: issue),
               onReact: isPlaceholder
                   ? () {}
-                  : () {
-                      ref.read(issueActionsProvider.notifier).react(
-                            houseId: houseId,
-                            issueId: issueId,
-                            emoji: '👏',
-                          );
-                    },
+                  : () => ref.read(issueActionsProvider.notifier).react(
+                      houseId: houseId, issueId: issueId, emoji: '👏'),
             ),
           ),
         ],
@@ -350,18 +275,9 @@ class IssueDetailScreen extends ConsumerWidget {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Resolve bottom sheet
-  // ---------------------------------------------------------------------------
-
-  void _showResolveSheet(
-    BuildContext context,
-    WidgetRef ref, {
-    required String houseId,
-    required String issueId,
-  }) {
+  void _showResolveSheet(BuildContext context, WidgetRef ref,
+      {required String houseId, required String issueId}) {
     final noteController = TextEditingController();
-
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -369,288 +285,205 @@ class IssueDetailScreen extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            24,
-            16,
-            16 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Resolution Note (optional)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.slate800,
-                ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            16, 24, 16, 16 + MediaQuery.of(ctx).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Resolution Note (optional)',
+                style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.slate800)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: noteController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'How did you fix it?',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: noteController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: 'How did you fix it?',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.emerald,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    final house = ref.read(currentHouseProvider).valueOrNull;
-                    final windowHours =
-                        house?.settings.disputeWindowHours ?? 48;
-                    ref.read(issueActionsProvider.notifier).resolve(
-                          houseId: houseId,
-                          issueId: issueId,
-                          note: noteController.text.trim().isEmpty
-                              ? null
-                              : noteController.text.trim(),
-                          disputeWindowHours: windowHours,
-                        );
-                  },
-                  child: const Text(
-                    'Confirm Resolution',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Dispute dialog
-  // ---------------------------------------------------------------------------
-
-  void _showDisputeDialog(
-    BuildContext context,
-    WidgetRef ref, {
-    required String houseId,
-    required String issueId,
-    required Issue issue,
-  }) {
-    final reasonController = TextEditingController();
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Dispute Resolution'),
-          content: TextField(
-            controller: reasonController,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              hintText: 'Why are you disputing?',
-              border: OutlineInputBorder(),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                ref.read(issueActionsProvider.notifier).dispute(
-                      houseId: houseId,
-                      issueId: issueId,
-                      reason: reasonController.text.trim(),
-                      resolvedByUid: issue.resolvedBy!,
-                    );
-              },
-              child: const Text(
-                'Dispute',
-                style: TextStyle(color: AppColors.rose),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  final house = ref.read(currentHouseProvider).valueOrNull;
+                  final windowHours =
+                      house?.settings.disputeWindowHours ?? 48;
+                  ref.read(issueActionsProvider.notifier).resolve(
+                        houseId: houseId,
+                        issueId: issueId,
+                        note: noteController.text.trim().isEmpty
+                            ? null
+                            : noteController.text.trim(),
+                        disputeWindowHours: windowHours,
+                      );
+                },
+                child: Text('Confirm Resolution',
+                    style: GoogleFonts.inter(
+                        fontSize: 15, fontWeight: FontWeight.w700)),
               ),
             ),
           ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  void _showDisputeDialog(BuildContext context, WidgetRef ref,
+      {required String houseId,
+      required String issueId,
+      required Issue issue}) {
+    final reasonController = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Dispute Resolution'),
+        content: TextField(
+          controller: reasonController,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            hintText: 'Why are you disputing?',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              ref.read(issueActionsProvider.notifier).dispute(
+                    houseId: houseId,
+                    issueId: issueId,
+                    reason: reasonController.text.trim(),
+                    resolvedByUid: issue.resolvedBy!,
+                  );
+            },
+            child:
+                const Text('Dispute', style: TextStyle(color: AppColors.rose)),
+          ),
+        ],
+      ),
     );
   }
 }
 
 // =============================================================================
-// Photo Header
+// Sticky Header (white bg, shadow)
 // =============================================================================
 
-class _PhotoHeader extends StatelessWidget {
-  const _PhotoHeader({
+class _StickyHeader extends StatelessWidget {
+  const _StickyHeader({
     required this.issue,
-    required this.typeColor,
-    required this.typeIcon,
     required this.status,
     required this.onBack,
   });
 
   final Issue issue;
-  final Color typeColor;
-  final IconData typeIcon;
-  final ({Color color, Color dotColor, IconData iconData, String label}) status;
+  final ({Color color, String label}) status;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
 
-    return SizedBox(
-      height: 288,
-      child: Stack(
-        fit: StackFit.expand,
+    return Container(
+      padding: EdgeInsets.fromLTRB(24, topPadding + 12, 24, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Background: colored gradient placeholder
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  typeColor.withValues(alpha: 0.25),
-                  typeColor.withValues(alpha: 0.10),
-                ],
+          // Top nav row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _CircleButton(
+                onTap: onBack,
+                child: const Icon(Icons.chevron_left,
+                    size: 24, color: AppColors.slate800),
               ),
-            ),
-            child: Center(
-              child: Icon(
-                typeIcon,
-                size: 80,
-                color: typeColor.withValues(alpha: 0.35),
-              ),
-            ),
-          ),
-
-          // Dark gradient overlay
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: [0.0, 0.4, 1.0],
-                colors: [
-                  Color(0x66000000), // black/40
-                  Color(0x00000000), // transparent
-                  Color(0xCC000000), // black/80
-                ],
-              ),
-            ),
-          ),
-
-          // Top nav
-          Positioned(
-            top: topPadding + 8,
-            left: 12,
-            right: 12,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Back button
-                _GlassCircleButton(
-                  onTap: onBack,
-                  child: const Icon(
-                    Icons.chevron_left,
-                    color: Colors.white,
-                    size: 22,
-                  ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-
-                // Type badge pill
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0x33000000),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    issue.type.name.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-
-                // More button
-                _GlassCircleButton(
-                  onTap: () {},
-                  child: const Icon(
-                    Icons.more_horiz,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Bottom: status + title
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status row
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: status.dotColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      status.label,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                // Title
-                Text(
-                  issue.title ?? 'Untitled Issue',
+                child: Text(
+                  issue.type.name.toUpperCase(),
                   style: GoogleFonts.inter(
-                    fontSize: 28,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.1,
+                    color: AppColors.slate800,
+                    letterSpacing: 1.2,
                   ),
                 ),
-              ],
+              ),
+              _CircleButton(
+                onTap: () {},
+                child: const Icon(Icons.more_horiz,
+                    size: 24, color: AppColors.slate800),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Status row
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: status.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                status.label,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.slate500,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Title
+          Text(
+            issue.title ?? 'Untitled Issue',
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: AppColors.slate800,
+              height: 1.15,
             ),
           ),
         ],
@@ -659,12 +492,11 @@ class _PhotoHeader extends StatelessWidget {
   }
 }
 
-// Glass circle button
-class _GlassCircleButton extends StatelessWidget {
-  const _GlassCircleButton({required this.child, required this.onTap});
+class _CircleButton extends StatelessWidget {
+  const _CircleButton({required this.onTap, required this.child});
 
-  final Widget child;
   final VoidCallback onTap;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -673,8 +505,8 @@ class _GlassCircleButton extends StatelessWidget {
       child: Container(
         width: 40,
         height: 40,
-        decoration: const BoxDecoration(
-          color: Color(0x33000000),
+        decoration: BoxDecoration(
+          color: AppColors.slate100,
           shape: BoxShape.circle,
         ),
         child: Center(child: child),
@@ -684,49 +516,110 @@ class _GlassCircleButton extends StatelessWidget {
 }
 
 // =============================================================================
-// Author / Assignee card
+// Photo Card
 // =============================================================================
 
-class _AuthorAssigneeCard extends StatelessWidget {
-  const _AuthorAssigneeCard({
-    required this.createdBy,
-    required this.anonymous,
-    required this.assignedTo,
-    required this.createdAt,
-  });
+class _PhotoCard extends StatelessWidget {
+  const _PhotoCard({required this.photoUrl});
 
-  final String createdBy;
-  final bool anonymous;
-  final String? assignedTo;
-  final Timestamp createdAt;
+  final String photoUrl;
 
   @override
   Widget build(BuildContext context) {
-    final timeStr = timeago.format(createdAt.toDate());
-    final authorLabel = anonymous ? 'Anonymous' : createdBy;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          color: AppColors.slate200,
+          child: Image.network(
+            photoUrl,
+            fit: BoxFit.contain,
+            width: double.infinity,
+            errorBuilder: (_, __, ___) => const SizedBox(
+              height: 200,
+              child: Center(
+                child: Icon(Icons.broken_image_outlined,
+                    size: 48, color: AppColors.slate400),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Meta Card (author + assignee)
+// =============================================================================
+
+class _MetaCard extends ConsumerWidget {
+  const _MetaCard({
+    required this.issue,
+    required this.houseId,
+    required this.isPlaceholder,
+  });
+
+  final Issue issue;
+  final String houseId;
+  final bool isPlaceholder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timeStr = timeago.format(issue.createdAt.toDate());
+    final authorName = issue.anonymous
+        ? 'Anonymous'
+        : isPlaceholder
+            ? issue.createdBy
+            : ref.watch(memberDisplayNameProvider((houseId, issue.createdBy)));
+    final assigneeName = issue.assignedTo != null && !isPlaceholder
+        ? ref.watch(memberDisplayNameProvider((houseId, issue.assignedTo!)))
+        : issue.assignedTo;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderMedium),
+        border: Border.all(color: AppColors.slate100),
       ),
       child: Row(
         children: [
-          // Author side
+          // Author
           Expanded(
             child: Row(
               children: [
-                const _AvatarCircle(size: 36),
-                const SizedBox(width: 10),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.slate100,
+                    border: Border.all(color: AppColors.slate200, width: 1.5),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.person, size: 22, color: AppColors.slate400),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        authorLabel,
-                        style: const TextStyle(
+                        authorName,
+                        style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: AppColors.slate800,
@@ -737,18 +630,15 @@ class _AuthorAssigneeCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.access_time,
-                            size: 11,
-                            color: AppColors.textTertiary,
-                          ),
-                          const SizedBox(width: 3),
+                          const Icon(Icons.access_time,
+                              size: 12, color: AppColors.slate500),
+                          const SizedBox(width: 4),
                           Text(
                             timeStr,
-                            style: const TextStyle(
+                            style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.textTertiary,
+                              color: AppColors.slate500,
                             ),
                           ),
                         ],
@@ -760,60 +650,61 @@ class _AuthorAssigneeCard extends StatelessWidget {
             ),
           ),
 
-          // Divider
-          Container(
-            width: 1,
-            height: 36,
-            color: AppColors.border,
-            margin: const EdgeInsets.symmetric(horizontal: 12),
-          ),
-
-          // Assignee side
+          // Assignee
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
+              Text(
                 'ASSIGNEE',
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textTertiary,
+                  color: AppColors.slate400,
                   letterSpacing: 1.0,
                 ),
               ),
               const SizedBox(height: 4),
-              assignedTo != null
-                  ? Row(
-                      children: [
-                        const Text(
-                          'Assigned',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.slate800,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const _AvatarCircle(size: 28),
-                      ],
-                    )
-                  : Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.orange50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.orange300),
-                      ),
-                      child: const Text(
-                        'Unassigned',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.orange,
-                        ),
+              if (assigneeName != null)
+                Row(
+                  children: [
+                    Text(
+                      assigneeName,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.slate800,
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.slate100,
+                      ),
+                      child: const Icon(Icons.person,
+                          size: 14, color: AppColors.slate400),
+                    ),
+                  ],
+                )
+              else
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.orange50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Unassigned',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.orange,
+                    ),
+                  ),
+                ),
             ],
           ),
         ],
@@ -823,196 +714,111 @@ class _AuthorAssigneeCard extends StatelessWidget {
 }
 
 // =============================================================================
-// Avatar circle (generic — no network image)
+// Timeline
 // =============================================================================
 
-class _AvatarCircle extends StatelessWidget {
-  const _AvatarCircle({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.slate200,
-        border: Border.all(color: AppColors.border, width: 1.5),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.person,
-          size: size * 0.55,
-          color: AppColors.slate400,
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// Section label
-// =============================================================================
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textTertiary,
-        letterSpacing: 1.5,
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// Description card
-// =============================================================================
-
-class _DescriptionCard extends StatelessWidget {
-  const _DescriptionCard({required this.description});
-
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderMedium),
-      ),
-      child: Text(
-        description,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
-          height: 1.5,
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// Timeline section
-// =============================================================================
-
-class _TimelineSection extends StatelessWidget {
-  const _TimelineSection({required this.issue});
+class _TimelineSection extends ConsumerWidget {
+  const _TimelineSection({
+    required this.issue,
+    required this.houseId,
+    required this.isPlaceholder,
+  });
 
   final Issue issue;
+  final String houseId;
+  final bool isPlaceholder;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final timeStr = timeago.format(issue.createdAt.toDate());
-    final steps = <_TimelineStep>[];
+    final authorName = issue.anonymous
+        ? 'Anonymous'
+        : isPlaceholder
+            ? 'Author'
+            : ref.watch(memberDisplayNameProvider((houseId, issue.createdBy)));
 
-    // Step 1: Issue Reported (always)
-    steps.add(_TimelineStep(
-      iconBg: AppColors.slate100,
-      icon: Icons.error_outline,
-      iconColor: AppColors.rose,
-      title: 'Issue Reported',
-      subtitle: '$timeStr by ${issue.anonymous ? 'Anonymous' : 'Author'}',
-      isLast: false,
-    ));
+    final assigneeName = issue.assignedTo != null && !isPlaceholder
+        ? ref.watch(memberDisplayNameProvider((houseId, issue.assignedTo!)))
+        : 'Assignee';
 
-    // Step 2: Claimed (if assignee exists)
-    if (issue.assignedTo != null) {
-      steps.add(_TimelineStep(
-        iconBg: AppColors.blue100,
-        icon: Icons.person_outline,
-        iconColor: AppColors.blue,
-        title: 'Claimed',
-        subtitle: 'by Assignee',
-        isLast: false,
-      ));
-    }
+    return Column(
+      children: [
+        // Created
+        _TimelineStep(
+          bgColor: AppColors.slate100,
+          icon: Icons.error_outline,
+          iconColor: AppColors.slate500,
+          title: 'Issue Reported',
+          subtitle: '$timeStr by $authorName',
+          isLast: issue.assignedTo == null &&
+              issue.status != IssueStatus.resolved &&
+              issue.status != IssueStatus.disputed &&
+              issue.status != IssueStatus.closed,
+        ),
 
-    // Step 3: Resolved (if status=resolved)
-    if (issue.status == IssueStatus.resolved) {
-      steps.add(_TimelineStep(
-        iconBg: AppColors.emerald,
-        icon: Icons.check,
-        iconColor: Colors.white,
-        title: 'Resolved',
-        subtitle: 'Pending 24h dispute window',
-        isLast: true,
-      ));
-    }
+        // Claimed
+        if (issue.assignedTo != null)
+          _TimelineStep(
+            bgColor: AppColors.blue100,
+            icon: Icons.person_outline,
+            iconColor: AppColors.blue,
+            title: 'Claimed',
+            subtitle: 'by $assigneeName',
+            isLast: issue.status != IssueStatus.resolved &&
+                issue.status != IssueStatus.disputed &&
+                issue.status != IssueStatus.closed,
+          ),
 
-    // Step 3 (alt): Disputed (if status=disputed)
-    if (issue.status == IssueStatus.disputed) {
-      steps.add(_TimelineStep(
-        iconBg: AppColors.rose,
-        icon: Icons.warning_rounded,
-        iconColor: Colors.white,
-        title: 'Disputed',
-        subtitle: 'by Reporter. "${issue.disputeReason ?? 'No reason given'}"',
-        isLast: true,
-      ));
-    }
+        // Resolved
+        if (issue.status == IssueStatus.resolved)
+          _TimelineStep(
+            bgColor: AppColors.emerald,
+            icon: Icons.check,
+            iconColor: Colors.white,
+            title: 'Resolved',
+            subtitle: 'Pending 24h dispute window',
+            isLast: true,
+          ),
 
-    // Step: Closed (auto-closed after dispute window)
-    if (issue.status == IssueStatus.closed) {
-      // If there was a resolved step too, add it first
-      if (issue.resolvedBy != null) {
-        steps.add(_TimelineStep(
-          iconBg: AppColors.emerald,
-          icon: Icons.check,
-          iconColor: Colors.white,
-          title: 'Resolved',
-          subtitle: 'by ${issue.resolvedBy ?? 'Assignee'}',
-          isLast: false,
-        ));
-      }
-      steps.add(_TimelineStep(
-        iconBg: AppColors.slate400,
-        icon: Icons.lock_outline,
-        iconColor: Colors.white,
-        title: 'Closed',
-        subtitle: 'Auto-closed after dispute window',
-        isLast: true,
-      ));
-    }
+        // Disputed
+        if (issue.status == IssueStatus.disputed)
+          _TimelineStep(
+            bgColor: AppColors.rose,
+            icon: Icons.warning_rounded,
+            iconColor: Colors.white,
+            title: 'Disputed',
+            subtitle: issue.disputeReason ?? 'No reason given',
+            isLast: true,
+          ),
 
-    // Mark last step
-    if (steps.isNotEmpty) {
-      final lastIdx = steps.length - 1;
-      steps[lastIdx] = steps[lastIdx].copyWithIsLast(true);
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderMedium),
-      ),
-      child: Column(
-        children: steps,
-      ),
+        // Closed
+        if (issue.status == IssueStatus.closed) ...[
+          if (issue.resolvedBy != null)
+            _TimelineStep(
+              bgColor: AppColors.emerald,
+              icon: Icons.check,
+              iconColor: Colors.white,
+              title: 'Resolved',
+              subtitle: 'by resolver',
+              isLast: false,
+            ),
+          _TimelineStep(
+            bgColor: AppColors.slate400,
+            icon: Icons.lock_outline,
+            iconColor: Colors.white,
+            title: 'Closed',
+            subtitle: 'Auto-closed after dispute window',
+            isLast: true,
+          ),
+        ],
+      ],
     );
   }
 }
 
 class _TimelineStep extends StatelessWidget {
   const _TimelineStep({
-    required this.iconBg,
+    required this.bgColor,
     required this.icon,
     required this.iconColor,
     required this.title,
@@ -1020,21 +826,12 @@ class _TimelineStep extends StatelessWidget {
     required this.isLast,
   });
 
-  final Color iconBg;
+  final Color bgColor;
   final IconData icon;
   final Color iconColor;
   final String title;
   final String subtitle;
   final bool isLast;
-
-  _TimelineStep copyWithIsLast(bool last) => _TimelineStep(
-        iconBg: iconBg,
-        icon: icon,
-        iconColor: iconColor,
-        title: title,
-        subtitle: subtitle,
-        isLast: last,
-      );
 
   @override
   Widget build(BuildContext context) {
@@ -1042,17 +839,18 @@ class _TimelineStep extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left: icon + connector line
           SizedBox(
-            width: 36,
+            width: 40,
             child: Column(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: iconBg,
+                    color: bgColor,
                     shape: BoxShape.circle,
+                    border: Border.all(
+                        color: const Color(0xFFFAFAF7), width: 4),
                   ),
                   child: Icon(icon, size: 16, color: iconColor),
                 ),
@@ -1060,26 +858,24 @@ class _TimelineStep extends StatelessWidget {
                   Expanded(
                     child: Container(
                       width: 2,
-                      color: AppColors.border,
+                      color: AppColors.slate200,
                       margin: const EdgeInsets.symmetric(vertical: 4),
                     ),
                   ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-
-          // Right: title + subtitle
+          const SizedBox(width: 16),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.slate800,
@@ -1088,10 +884,10 @@ class _TimelineStep extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondary,
+                      color: AppColors.slate500,
                     ),
                   ),
                 ],
@@ -1105,7 +901,7 @@ class _TimelineStep extends StatelessWidget {
 }
 
 // =============================================================================
-// Bottom action bar
+// Bottom Action Bar
 // =============================================================================
 
 class _BottomActionBar extends StatelessWidget {
@@ -1130,22 +926,20 @@ class _BottomActionBar extends StatelessWidget {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        border: const Border(
-          top: BorderSide(color: AppColors.borderMedium),
-        ),
+        color: Colors.white.withValues(alpha: 0.9),
+        border: const Border(top: BorderSide(color: AppColors.slate100)),
       ),
-      child: _buildActions(context),
+      child: _buildActions(),
     );
   }
 
-  Widget _buildActions(BuildContext context) {
+  Widget _buildActions() {
     switch (issue.status) {
       case IssueStatus.open:
         return _ActionButton(
-          label: 'Claim Issue (+50 pts)',
+          label: 'Claim Issue (+${issue.points} pts)',
           backgroundColor: AppColors.orange,
           textColor: Colors.white,
           icon: Icons.arrow_forward_rounded,
@@ -1158,72 +952,70 @@ class _BottomActionBar extends StatelessWidget {
             label: 'Mark Resolved',
             backgroundColor: AppColors.emerald,
             textColor: Colors.white,
-            icon: Icons.check_rounded,
+            icon: Icons.check_circle_outline,
             onTap: onResolve,
           );
-        } else {
-          return const Center(
-            child: Text(
-              'Assigned to someone else',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textTertiary,
-              ),
-            ),
-          );
         }
+        return Center(
+          child: Text(
+            'Assigned to someone else',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.slate400,
+            ),
+          ),
+        );
 
       case IssueStatus.resolved:
         if (issue.resolvedBy == currentUid) {
-          // Resolved by current user — only show Props
           return _ActionButton(
             label: 'Props',
             backgroundColor: AppColors.emerald50,
             textColor: AppColors.emerald,
             icon: Icons.celebration_outlined,
-            iconColor: AppColors.emerald,
             onTap: onReact,
           );
-        } else {
-          // Not the resolver — show both Dispute and Props
-          return Row(
-            children: [
-              Expanded(
-                child: _ActionButton(
-                  label: 'Dispute',
-                  backgroundColor: Colors.white,
-                  textColor: AppColors.rose,
-                  borderColor: AppColors.rose,
-                  icon: Icons.warning_rounded,
-                  iconColor: AppColors.rose,
-                  onTap: onDispute,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _ActionButton(
-                  label: 'Props',
-                  backgroundColor: AppColors.emerald50,
-                  textColor: AppColors.emerald,
-                  icon: Icons.celebration_outlined,
-                  iconColor: AppColors.emerald,
-                  onTap: onReact,
-                ),
-              ),
-            ],
-          );
         }
+        return Row(
+          children: [
+            Expanded(
+              child: _ActionButton(
+                label: 'Dispute',
+                backgroundColor: Colors.white,
+                textColor: AppColors.slate800,
+                borderColor: AppColors.slate200,
+                icon: Icons.warning_rounded,
+                iconColor: AppColors.rose,
+                onTap: onDispute,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ActionButton(
+                label: 'Props',
+                backgroundColor: AppColors.emerald50,
+                textColor: AppColors.emerald,
+                borderColor: AppColors.emerald100,
+                icon: Icons.celebration_outlined,
+                onTap: onReact,
+              ),
+            ),
+          ],
+        );
 
       case IssueStatus.disputed:
       case IssueStatus.closed:
-        return const Center(
-          child: Text(
-            'No actions available',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textTertiary,
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No actions available',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.slate400,
+              ),
             ),
           ),
         );
@@ -1255,12 +1047,21 @@ class _ActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 52,
+        height: 56,
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: borderColor != null
-              ? Border.all(color: borderColor!, width: 1.5)
+              ? Border.all(color: borderColor!, width: 2)
+              : null,
+          boxShadow: borderColor == null
+              ? [
+                  BoxShadow(
+                    color: backgroundColor.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: Row(
@@ -1268,18 +1069,14 @@ class _ActionButton extends StatelessWidget {
           children: [
             Text(
               label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
                 color: textColor,
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              icon,
-              size: 18,
-              color: iconColor ?? textColor,
-            ),
+            Icon(icon, size: 20, color: iconColor ?? textColor),
           ],
         ),
       ),

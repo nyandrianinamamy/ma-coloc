@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/activity_event.dart';
 import '../models/issue.dart';
+import '../models/member.dart';
 import 'house_provider.dart';
+import 'member_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Unified activity item (merges issue events + activity subcollection)
@@ -65,6 +67,13 @@ final activityFeedProvider =
   final activityAsync = ref.watch(activityStreamProvider(houseId));
   final recentIssuesAsync = ref.watch(_recentIssuesProvider(houseId));
   final recentResolvedAsync = ref.watch(_recentResolvedProvider(houseId));
+  final members = ref.watch(membersStreamProvider(houseId)).valueOrNull ?? [];
+
+  String resolveName(String uid) {
+    final match = members.where((m) => m.uid == uid);
+    if (match.isNotEmpty) return match.first.displayName;
+    return uid.length > 8 ? '${uid.substring(0, 8)}…' : uid;
+  }
 
   return activityAsync.when(
     loading: () => const AsyncLoading(),
@@ -82,7 +91,7 @@ final activityFeedProvider =
           for (final issue in recentIssues) {
             items.add(ActivityItem(
               type: 'created',
-              userName: issue.anonymous ? 'Anonymous' : issue.createdBy,
+              userName: issue.anonymous ? 'Anonymous' : resolveName(issue.createdBy),
               detail: issue.title ?? 'Untitled',
               timestamp: issue.createdAt.toDate(),
               issueId: issue.id,
@@ -94,7 +103,7 @@ final activityFeedProvider =
             if (issue.resolvedBy != null && issue.resolvedAt != null) {
               items.add(ActivityItem(
                 type: 'resolved',
-                userName: issue.resolvedBy!,
+                userName: resolveName(issue.resolvedBy!),
                 detail: issue.title ?? 'Untitled',
                 timestamp: issue.resolvedAt!.toDate(),
                 issueId: issue.id,

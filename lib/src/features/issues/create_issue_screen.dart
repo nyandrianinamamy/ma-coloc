@@ -26,6 +26,7 @@ class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
   String _selectedType = 'Chore';
   bool _isAnonymous = false;
   final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
   XFile? _photo;
   bool _isSubmitting = false;
@@ -33,6 +34,7 @@ class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -67,6 +69,9 @@ class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
             ),
             title:
                 _titleController.text.isNotEmpty ? _titleController.text : null,
+            description: _descriptionController.text.isNotEmpty
+                ? _descriptionController.text
+                : null,
             anonymous: _isAnonymous,
             photo: _photo,
           );
@@ -88,6 +93,7 @@ class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
                   selectedType: _selectedType,
                   isAnonymous: _isAnonymous,
                   titleController: _titleController,
+                  descriptionController: _descriptionController,
                   photo: _photo,
                   isSubmitting: _isSubmitting,
                   onTypeChanged: (t) => setState(() => _selectedType = t),
@@ -158,62 +164,36 @@ class _CameraView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final viewfinderWidth = screenSize.width * 0.8;
-    final viewfinderHeight = screenSize.height * 0.5;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
-            // Full-screen dark placeholder for camera
+            // Dark background while camera picker is open
             Positioned.fill(
               child: Container(color: const Color(0xFF0A0A0A)),
             ),
 
-            // Center viewfinder guide
+            // Center instruction
             Center(
-              child: SizedBox(
-                width: viewfinderWidth,
-                height: viewfinderHeight,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Rounded rectangle border guide
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          width: 2,
-                        ),
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.camera_alt_outlined,
+                    color: Colors.white.withValues(alpha: 0.5),
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Take a photo of the issue',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
-                    // Camera icon + label
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.camera_alt_outlined,
-                          color: Colors.white.withValues(alpha: 0.7),
-                          size: 40,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Point at the mess or\nbroken thing',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
 
@@ -227,7 +207,6 @@ class _CameraView extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   children: [
-                    // Close button
                     GestureDetector(
                       onTap: onClose,
                       child: Container(
@@ -245,7 +224,6 @@ class _CameraView extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    // "NEW ISSUE" label
                     const Text(
                       'NEW ISSUE',
                       style: TextStyle(
@@ -256,7 +234,6 @@ class _CameraView extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    // Invisible placeholder to balance the close button
                     const SizedBox(width: 40),
                   ],
                 ),
@@ -359,6 +336,7 @@ class _DetailsForm extends StatelessWidget {
     required this.selectedType,
     required this.isAnonymous,
     required this.titleController,
+    required this.descriptionController,
     required this.photo,
     required this.isSubmitting,
     required this.onTypeChanged,
@@ -370,6 +348,7 @@ class _DetailsForm extends StatelessWidget {
   final String selectedType;
   final bool isAnonymous;
   final TextEditingController titleController;
+  final TextEditingController descriptionController;
   final XFile? photo;
   final bool isSubmitting;
   final ValueChanged<String> onTypeChanged;
@@ -452,6 +431,10 @@ class _DetailsForm extends StatelessWidget {
 
                     // Title input
                     _TitleInput(controller: titleController),
+                    const SizedBox(height: 20),
+
+                    // Description input
+                    _DescriptionInput(controller: descriptionController),
                     const SizedBox(height: 20),
 
                     // Anonymous toggle
@@ -768,6 +751,62 @@ class _TitleInputState extends State<_TitleInput> {
             ),
             decoration: const InputDecoration(
               hintText: 'e.g. Dishes in sink again…',
+              hintStyle: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textTertiary,
+              ),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Description Input
+// ---------------------------------------------------------------------------
+
+class _DescriptionInput extends StatelessWidget {
+  const _DescriptionInput({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Description',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.slate500,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderMedium),
+          ),
+          child: TextField(
+            controller: controller,
+            maxLines: 3,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+            decoration: const InputDecoration(
+              hintText: 'What\'s going on? Add some context…',
               hintStyle: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
