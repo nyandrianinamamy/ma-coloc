@@ -129,14 +129,30 @@ class _CameraView extends StatelessWidget {
   final VoidCallback onClose;
   final ValueChanged<XFile> onPhotoPicked;
 
-  Future<void> _pickImage(ImageSource source) async {
-    final photo = await ImagePicker().pickImage(
-      source: source,
-      maxWidth: 1024,
-      imageQuality: 85,
-    );
-    if (photo != null) {
-      onPhotoPicked(photo);
+  Future<void> _pickImage(ImageSource source, BuildContext context) async {
+    try {
+      final photo = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1024,
+        imageQuality: 85,
+      );
+      if (photo != null) {
+        onPhotoPicked(photo);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        final isPermission = e.toString().contains('photo_access_denied') ||
+            e.toString().contains('camera_access_denied');
+        final message = isPermission
+            ? (source == ImageSource.camera
+                ? 'Camera access denied. Please allow camera access in Settings.'
+                : 'Photo library access denied. Please allow access in Settings.')
+            : 'Could not open ${source == ImageSource.camera ? 'camera' : 'photo library'}. Please try again.';
+        debugPrint('ImagePicker error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
     }
   }
 
@@ -260,7 +276,7 @@ class _CameraView extends StatelessWidget {
                   children: [
                     // Gallery button
                     GestureDetector(
-                      onTap: () => _pickImage(ImageSource.gallery),
+                      onTap: () => _pickImage(ImageSource.gallery, context),
                       child: Container(
                         width: 52,
                         height: 52,
@@ -281,7 +297,7 @@ class _CameraView extends StatelessWidget {
 
                     // Capture button
                     GestureDetector(
-                      onTap: () => _pickImage(ImageSource.camera),
+                      onTap: () => _pickImage(ImageSource.camera, context),
                       child: Container(
                         width: 80,
                         height: 80,
