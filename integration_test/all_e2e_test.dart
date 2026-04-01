@@ -317,7 +317,7 @@ void main() {
       final houseId = result.data['houseId'] as String;
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
-      // Seed deep clean
+      // Seed deep clean with 'assignments' schema (matches callable expectations)
       final dcRef = FirebaseFirestore.instance
           .collection('houses/$houseId/deepCleans')
           .doc();
@@ -326,33 +326,29 @@ void main() {
         'createdAt': Timestamp.fromDate(now),
         'deadline': Timestamp.fromDate(now.add(const Duration(days: 7))),
         'status': 'active',
-        'rooms': {
-          'Kitchen': {'claimedBy': null, 'completedAt': null, 'points': 100},
-          'Bathroom': {
-            'claimedBy': null,
-            'completedAt': null,
-            'points': 100
-          },
+        'assignments': {
+          'Kitchen': {'uid': null, 'completedAt': null, 'points': 100},
+          'Bathroom': {'uid': null, 'completedAt': null, 'points': 100},
         },
       });
 
       // Claim
       await functions.httpsCallable('claimRoom').call({
         'houseId': houseId,
-        'deepCleanId': dcRef.id,
+        'cleanId': dcRef.id,
         'roomName': 'Kitchen',
       });
       var dc = await dcRef.get();
-      expect((dc.data()!['rooms']['Kitchen'] as Map)['claimedBy'], uid);
+      expect((dc.data()!['assignments']['Kitchen'] as Map)['uid'], uid);
 
       // Complete
       await functions.httpsCallable('completeRoom').call({
         'houseId': houseId,
-        'deepCleanId': dcRef.id,
+        'cleanId': dcRef.id,
         'roomName': 'Kitchen',
       });
       dc = await dcRef.get();
-      expect((dc.data()!['rooms']['Kitchen'] as Map)['completedAt'], isNotNull);
+      expect((dc.data()!['assignments']['Kitchen'] as Map)['completedAt'], isNotNull);
 
       await pumpApp(tester);
       expect(find.byType(HomeScreen), findsOneWidget);
@@ -391,7 +387,7 @@ void main() {
       final houseId = result.data['houseId'] as String;
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
-      // Seed activity
+      // Seed activity BEFORE pumping so streams pick it up
       await seedDocument('houses/$houseId/activity/badge1', {
         'type': 'badgeEarned',
         'uid': uid,
@@ -403,10 +399,8 @@ void main() {
       await pumpApp(tester);
       expect(find.byType(HomeScreen), findsOneWidget);
 
-      // Wait for stream data
-      await tester.pumpAndSettle(const Duration(seconds: 3));
-
-      expect(find.textContaining('First Blood'), findsWidgets);
+      // Wait for stream data to load via polling
+      await waitFor(tester, find.textContaining('First Blood'), timeout: const Duration(seconds: 20));
     });
 
     testWidgets('volunteer nudge with unclaimed rooms', (tester) async {
@@ -421,7 +415,8 @@ void main() {
       });
       final houseId = result.data['houseId'] as String;
 
-      // Seed deep clean with unclaimed rooms
+      // Seed deep clean with unclaimed rooms BEFORE pumping
+      // Schema matches RoomAssignment model: uid, fromVolunteer, completed
       await FirebaseFirestore.instance
           .collection('houses/$houseId/deepCleans')
           .add({
@@ -429,16 +424,16 @@ void main() {
         'deadline':
             Timestamp.fromDate(DateTime.now().add(const Duration(days: 7))),
         'status': 'active',
-        'rooms': {
-          'Kitchen': {'claimedBy': null, 'completedAt': null, 'points': 100},
+        'assignments': {
+          'Kitchen': {'uid': null, 'fromVolunteer': false, 'completed': false},
         },
       });
 
       await pumpApp(tester);
       expect(find.byType(HomeScreen), findsOneWidget);
-      await tester.pumpAndSettle(const Duration(seconds: 3));
 
-      expect(find.textContaining('unclaimed'), findsOneWidget);
+      // Wait for stream data via polling
+      await waitFor(tester, find.textContaining('unclaimed'), timeout: const Duration(seconds: 20));
     });
   });
 }
