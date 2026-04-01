@@ -410,11 +410,16 @@ class IssueDetailScreen extends ConsumerWidget {
                     style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
                         color: AppColors.slate800)),
-                onTap: () {
+                onTap: () async {
                   Navigator.of(ctx).pop();
-                  ref.read(issueActionsProvider.notifier).archive(
+                  await ref.read(issueActionsProvider.notifier).archive(
                       houseId: houseId, issueId: issueId, archived: true);
-                  if (context.mounted) context.pop();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Issue archived')),
+                    );
+                    context.pop();
+                  }
                 },
               ),
             if (!isCreator && !isAdmin)

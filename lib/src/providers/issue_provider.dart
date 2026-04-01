@@ -82,7 +82,10 @@ final issuesStreamProvider =
   }
 
   return query.snapshots().map(
-        (snap) => snap.docs.map(Issue.fromFirestore).toList(),
+        (snap) => snap.docs
+            .where((doc) => doc.data()['archived'] != true)
+            .map(Issue.fromFirestore)
+            .toList(),
       );
 });
 
