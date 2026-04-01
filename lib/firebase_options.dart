@@ -6,8 +6,10 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 
 class DefaultFirebaseOptions {
   /// Returns true when credentials are still placeholders.
-  /// Web always uses emulator-only config, so it's a placeholder too.
-  static bool get isPlaceholder => kIsWeb || android.apiKey == 'TODO';
+  /// Web returns false because the demo-macoloc config is used for E2E tests
+  /// against emulators. When real web credentials are added via
+  /// `flutterfire configure`, this file will be regenerated.
+  static bool get isPlaceholder => !kIsWeb && android.apiKey == 'TODO';
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) return web;

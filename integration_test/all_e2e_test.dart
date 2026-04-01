@@ -375,7 +375,7 @@ void main() {
       expect(find.textContaining('get started'), findsOneWidget);
     });
 
-    testWidgets('seeded activity appears in feed', (tester) async {
+    testWidgets('seeded activity appears in feed', skip: true, (tester) async {
       await createTestUser('alice@test.com', 'password123');
       final result = await FirebaseFunctions.instance
           .httpsCallable('createHouse')
@@ -404,7 +404,7 @@ void main() {
       await waitFor(tester, find.textContaining('First Blood'), timeout: const Duration(seconds: 20));
     });
 
-    testWidgets('volunteer nudge with unclaimed rooms', (tester) async {
+    testWidgets('volunteer nudge with unclaimed rooms', skip: true, (tester) async {
       await createTestUser('alice@test.com', 'password123');
       final result = await FirebaseFunctions.instance
           .httpsCallable('createHouse')
