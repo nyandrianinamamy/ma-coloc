@@ -14,7 +14,6 @@ class MobileShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      extendBody: true,
       floatingActionButton: _CenterFab(
         onTap: () => context.push('/create'),
       ),
@@ -87,8 +86,6 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: BackdropFilter(
@@ -108,7 +105,7 @@ class _BottomBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: SizedBox(
-              height: 64 + bottomPadding,
+              height: 64,
               child: Row(
                 children: [
                   // Left two items

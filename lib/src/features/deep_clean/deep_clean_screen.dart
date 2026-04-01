@@ -244,7 +244,7 @@ class _DeepCleanScreenState extends ConsumerState<DeepCleanScreen> {
               deadlineLabel: 'Not scheduled',
               onBack: () => context.pop(),
             ),
-            const SizedBox(height: 80),
+            const SizedBox(height: 16),
             const Center(
               child: Text(
                 'No deep clean scheduled this month',
