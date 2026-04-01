@@ -29,7 +29,7 @@ void main() {
 
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
-      // Seed a deep clean cycle (normally created by scheduled function)
+      // Seed a deep clean cycle using the correct schema (assignments, not rooms)
       final now = DateTime.now();
       final deadline = now.add(const Duration(days: 7));
       final deepCleanRef = FirebaseFirestore.instance
@@ -39,37 +39,37 @@ void main() {
         'createdAt': Timestamp.fromDate(now),
         'deadline': Timestamp.fromDate(deadline),
         'status': 'active',
-        'rooms': {
-          'Kitchen': {'claimedBy': null, 'completedAt': null, 'points': 100},
-          'Bathroom': {'claimedBy': null, 'completedAt': null, 'points': 100},
+        'assignments': {
+          'Kitchen': {'uid': null, 'fromVolunteer': false, 'completed': false},
+          'Bathroom': {'uid': null, 'fromVolunteer': false, 'completed': false},
         },
       });
 
-      // Claim Kitchen via callable
+      // Claim Kitchen via callable (uses cleanId, not deepCleanId)
       final functions = FirebaseFunctions.instance;
       await functions.httpsCallable('claimRoom').call({
         'houseId': houseId,
-        'deepCleanId': deepCleanRef.id,
+        'cleanId': deepCleanRef.id,
         'roomName': 'Kitchen',
       });
 
       // Verify room is claimed
       final dcDoc = await deepCleanRef.get();
-      final rooms = dcDoc.data()!['rooms'] as Map<String, dynamic>;
-      final kitchen = rooms['Kitchen'] as Map<String, dynamic>;
-      expect(kitchen['claimedBy'], uid);
+      final assignments = dcDoc.data()!['assignments'] as Map<String, dynamic>;
+      final kitchen = assignments['Kitchen'] as Map<String, dynamic>;
+      expect(kitchen['uid'], uid);
 
       // Complete the room via callable
       await functions.httpsCallable('completeRoom').call({
         'houseId': houseId,
-        'deepCleanId': deepCleanRef.id,
+        'cleanId': deepCleanRef.id,
         'roomName': 'Kitchen',
       });
 
       // Verify room is completed
       final dcDoc2 = await deepCleanRef.get();
-      final rooms2 = dcDoc2.data()!['rooms'] as Map<String, dynamic>;
-      final kitchen2 = rooms2['Kitchen'] as Map<String, dynamic>;
+      final assignments2 = dcDoc2.data()!['assignments'] as Map<String, dynamic>;
+      final kitchen2 = assignments2['Kitchen'] as Map<String, dynamic>;
       expect(kitchen2['completedAt'], isNotNull);
 
       // Verify activity doc was written

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import 'package:macoloc/src/features/home/home_screen.dart';
 
 import 'e2e_helpers.dart';
@@ -90,17 +91,19 @@ void main() {
         houseName: 'Nudge House',
       );
 
-      // Seed a deep clean with unclaimed rooms
+      // Seed deep clean using current month doc ID (matches currentDeepCleanProvider)
+      // and correct schema (assignments with uid/fromVolunteer/completed)
+      final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
       final now = DateTime.now();
       await FirebaseFirestore.instance
-          .collection('houses/$houseId/deepCleans')
-          .add({
+          .doc('houses/$houseId/deepCleans/$currentMonth')
+          .set({
         'createdAt': Timestamp.fromDate(now),
         'deadline': Timestamp.fromDate(now.add(const Duration(days: 7))),
         'status': 'active',
-        'rooms': {
-          'Kitchen': {'claimedBy': null, 'completedAt': null, 'points': 100},
-          'Bathroom': {'claimedBy': null, 'completedAt': null, 'points': 100},
+        'assignments': {
+          'Kitchen': {'uid': null, 'fromVolunteer': false, 'completed': false},
+          'Bathroom': {'uid': null, 'fromVolunteer': false, 'completed': false},
         },
       });
 

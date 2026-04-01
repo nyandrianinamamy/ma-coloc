@@ -6,7 +6,8 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 
 class DefaultFirebaseOptions {
   /// Returns true when credentials are still placeholders.
-  static bool get isPlaceholder => !kIsWeb && android.apiKey == 'TODO';
+  /// Web always uses emulator-only config, so it's a placeholder too.
+  static bool get isPlaceholder => kIsWeb || android.apiKey == 'TODO';
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) return web;

@@ -7,6 +7,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import 'package:macoloc/src/features/onboarding/sign_in_screen.dart';
 import 'package:macoloc/src/features/onboarding/house_choice_screen.dart';
 import 'package:macoloc/src/features/home/home_screen.dart';
@@ -374,7 +375,7 @@ void main() {
       expect(find.textContaining('get started'), findsOneWidget);
     });
 
-    testWidgets('seeded activity appears in feed', skip: true /* Stream timing issue in web E2E */, (tester) async {
+    testWidgets('seeded activity appears in feed', (tester) async {
       await createTestUser('alice@test.com', 'password123');
       final result = await FirebaseFunctions.instance
           .httpsCallable('createHouse')
@@ -403,7 +404,7 @@ void main() {
       await waitFor(tester, find.textContaining('First Blood'), timeout: const Duration(seconds: 20));
     });
 
-    testWidgets('volunteer nudge with unclaimed rooms', skip: true /* Stream timing issue in web E2E */, (tester) async {
+    testWidgets('volunteer nudge with unclaimed rooms', (tester) async {
       await createTestUser('alice@test.com', 'password123');
       final result = await FirebaseFunctions.instance
           .httpsCallable('createHouse')
@@ -415,11 +416,11 @@ void main() {
       });
       final houseId = result.data['houseId'] as String;
 
-      // Seed deep clean with unclaimed rooms BEFORE pumping
-      // Schema matches RoomAssignment model: uid, fromVolunteer, completed
+      // Seed deep clean using current month doc ID (matches currentDeepCleanProvider)
+      final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
       await FirebaseFirestore.instance
-          .collection('houses/$houseId/deepCleans')
-          .add({
+          .doc('houses/$houseId/deepCleans/$currentMonth')
+          .set({
         'createdAt': Timestamp.now(),
         'deadline':
             Timestamp.fromDate(DateTime.now().add(const Duration(days: 7))),
