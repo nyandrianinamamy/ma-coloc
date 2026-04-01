@@ -12,6 +12,7 @@ import '../../models/issue.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/house_provider.dart';
 import '../../providers/issue_provider.dart';
+import '../../providers/member_provider.dart';
 import '../../theme/app_theme.dart';
 
 class IssueDetailScreen extends ConsumerWidget {
@@ -275,6 +276,7 @@ class IssueDetailScreen extends ConsumerWidget {
                   delegate: SliverChildListDelegate([
                     // Author / Assignee card
                     _AuthorAssigneeCard(
+                      houseId: houseId,
                       createdBy: issue.createdBy,
                       anonymous: issue.anonymous,
                       assignedTo: issue.assignedTo,
@@ -701,23 +703,27 @@ class _GlassCircleButton extends StatelessWidget {
 // Author / Assignee card
 // =============================================================================
 
-class _AuthorAssigneeCard extends StatelessWidget {
+class _AuthorAssigneeCard extends ConsumerWidget {
   const _AuthorAssigneeCard({
+    required this.houseId,
     required this.createdBy,
     required this.anonymous,
     required this.assignedTo,
     required this.createdAt,
   });
 
+  final String houseId;
   final String createdBy;
   final bool anonymous;
   final String? assignedTo;
   final Timestamp createdAt;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final timeStr = timeago.format(createdAt.toDate());
-    final authorLabel = anonymous ? 'Anonymous' : createdBy;
+    final authorLabel = anonymous
+        ? 'Anonymous'
+        : ref.watch(memberDisplayNameProvider((houseId, createdBy)));
 
     return Container(
       padding: const EdgeInsets.all(14),
