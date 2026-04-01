@@ -102,9 +102,13 @@ Future<ProviderContainer> pumpApp(WidgetTester tester) async {
 
 /// Convenience: clear all emulator state (Auth + Firestore).
 Future<void> resetEmulators() async {
-  // Sign out first to avoid stale auth state
+  // Sign out first and wait for auth state to propagate
   try {
     await FirebaseAuth.instance.signOut();
+    // Wait for authStateChanges to fire with null user
+    await FirebaseAuth.instance.authStateChanges()
+        .firstWhere((user) => user == null)
+        .timeout(const Duration(seconds: 5), onTimeout: () => null);
   } catch (_) {}
   await clearAuth();
   await clearFirestore();
@@ -144,6 +148,24 @@ Future<void> waitFor(WidgetTester tester, Finder finder, {Duration timeout = con
   await tester.pumpAndSettle();
   if (finder.evaluate().isEmpty) {
     throw TestFailure('waitFor timed out after $timeout looking for $finder');
+  }
+}
+
+/// Wait for a widget using runAsync to allow real I/O (Firestore streams).
+/// Unlike [waitFor], this lets pending microtasks and I/O events complete
+/// between pump cycles, which is needed for Firestore snapshot listeners.
+Future<void> waitForAsync(WidgetTester tester, Finder finder, {Duration timeout = const Duration(seconds: 30)}) async {
+  final end = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(end)) {
+    // Let real I/O (Firestore WebSocket events) complete
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 500)));
+    // Then pump to rebuild widgets with new data
+    await tester.pump();
+    if (finder.evaluate().isNotEmpty) return;
+  }
+  await tester.pumpAndSettle();
+  if (finder.evaluate().isEmpty) {
+    throw TestFailure('waitForAsync timed out after $timeout looking for $finder');
   }
 }
 
