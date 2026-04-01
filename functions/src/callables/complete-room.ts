@@ -5,7 +5,7 @@ import { sendNotification } from "../notifications";
 
 const DEEP_CLEAN_ROOM_POINTS = 5;
 
-export const completeRoom = onCall(async (request) => {
+export const completeRoom = onCall({ invoker: "public" }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Must be signed in");
   }

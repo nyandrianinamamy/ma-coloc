@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "53644947761",
+    "project_id": "ma-coloc-87f1b",
+    "storage_bucket": "ma-coloc-87f1b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:53644947761:android:49fc8b4763ec54d6c3c010",
+        "android_client_info": {
+          "package_name": "com.macoloc.macoloc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTG-8UKWIRen5LLGjrmn_wFn47WeYUNT8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
