@@ -49,7 +49,9 @@ jobs:
         uses: nanasess/setup-chromedriver@v2
 
       - name: Run E2E tests
+        timeout-minutes: 10
         run: |
           chromedriver --port=4444 &
+          CHROMEDRIVER_PID=$!
           xvfb-run firebase emulators:exec --project demo-macoloc --config firebase.e2e.json \
-            "flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_e2e_test.dart -d chrome --browser-name=chrome"
+            "flutter drive --no-keep-app-running --driver=test_driver/integration_test.dart --target=integration_test/all_e2e_test.dart -d chrome --browser-name=chrome; EXIT_CODE=\$?; kill $CHROMEDRIVER_PID 2>/dev/null; exit \$EXIT_CODE"
