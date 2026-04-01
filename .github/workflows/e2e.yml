@@ -51,5 +51,5 @@ jobs:
       - name: Run E2E tests
         run: |
           chromedriver --port=4444 &
-          firebase emulators:exec --project demo-macoloc --config firebase.e2e.json \
+          xvfb-run firebase emulators:exec --project demo-macoloc --config firebase.e2e.json \
             "flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_e2e_test.dart -d chrome --browser-name=chrome"
