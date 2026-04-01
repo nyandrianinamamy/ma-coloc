@@ -383,8 +383,8 @@ mixin _$Member {
   Timestamp get joinedAt => throw _privateConstructorUsedError;
   MemberRole get role => throw _privateConstructorUsedError;
   Presence get presence => throw _privateConstructorUsedError;
-  @TimestampConverter()
-  Timestamp get presenceUpdatedAt => throw _privateConstructorUsedError;
+  @NullableTimestampConverter()
+  Timestamp? get presenceUpdatedAt => throw _privateConstructorUsedError;
   MemberStats get stats => throw _privateConstructorUsedError;
   String? get fcmToken => throw _privateConstructorUsedError;
   @JsonKey(defaultValue: true)
@@ -411,7 +411,7 @@ abstract class $MemberCopyWith<$Res> {
     @TimestampConverter() Timestamp joinedAt,
     MemberRole role,
     Presence presence,
-    @TimestampConverter() Timestamp presenceUpdatedAt,
+    @NullableTimestampConverter() Timestamp? presenceUpdatedAt,
     MemberStats stats,
     String? fcmToken,
     @JsonKey(defaultValue: true) bool notificationsEnabled,
@@ -441,7 +441,7 @@ class _$MemberCopyWithImpl<$Res, $Val extends Member>
     Object? joinedAt = null,
     Object? role = null,
     Object? presence = null,
-    Object? presenceUpdatedAt = null,
+    Object? presenceUpdatedAt = freezed,
     Object? stats = null,
     Object? fcmToken = freezed,
     Object? notificationsEnabled = null,
@@ -472,10 +472,10 @@ class _$MemberCopyWithImpl<$Res, $Val extends Member>
                 ? _value.presence
                 : presence // ignore: cast_nullable_to_non_nullable
                       as Presence,
-            presenceUpdatedAt: null == presenceUpdatedAt
+            presenceUpdatedAt: freezed == presenceUpdatedAt
                 ? _value.presenceUpdatedAt
                 : presenceUpdatedAt // ignore: cast_nullable_to_non_nullable
-                      as Timestamp,
+                      as Timestamp?,
             stats: null == stats
                 ? _value.stats
                 : stats // ignore: cast_nullable_to_non_nullable
@@ -519,7 +519,7 @@ abstract class _$$MemberImplCopyWith<$Res> implements $MemberCopyWith<$Res> {
     @TimestampConverter() Timestamp joinedAt,
     MemberRole role,
     Presence presence,
-    @TimestampConverter() Timestamp presenceUpdatedAt,
+    @NullableTimestampConverter() Timestamp? presenceUpdatedAt,
     MemberStats stats,
     String? fcmToken,
     @JsonKey(defaultValue: true) bool notificationsEnabled,
@@ -549,7 +549,7 @@ class __$$MemberImplCopyWithImpl<$Res>
     Object? joinedAt = null,
     Object? role = null,
     Object? presence = null,
-    Object? presenceUpdatedAt = null,
+    Object? presenceUpdatedAt = freezed,
     Object? stats = null,
     Object? fcmToken = freezed,
     Object? notificationsEnabled = null,
@@ -580,10 +580,10 @@ class __$$MemberImplCopyWithImpl<$Res>
             ? _value.presence
             : presence // ignore: cast_nullable_to_non_nullable
                   as Presence,
-        presenceUpdatedAt: null == presenceUpdatedAt
+        presenceUpdatedAt: freezed == presenceUpdatedAt
             ? _value.presenceUpdatedAt
             : presenceUpdatedAt // ignore: cast_nullable_to_non_nullable
-                  as Timestamp,
+                  as Timestamp?,
         stats: null == stats
             ? _value.stats
             : stats // ignore: cast_nullable_to_non_nullable
@@ -612,7 +612,7 @@ class _$MemberImpl implements _Member {
     @TimestampConverter() required this.joinedAt,
     this.role = MemberRole.member,
     this.presence = Presence.away,
-    @TimestampConverter() required this.presenceUpdatedAt,
+    @NullableTimestampConverter() this.presenceUpdatedAt,
     this.stats = const MemberStats(),
     this.fcmToken,
     this.notificationsEnabled = true,
@@ -637,8 +637,8 @@ class _$MemberImpl implements _Member {
   @JsonKey()
   final Presence presence;
   @override
-  @TimestampConverter()
-  final Timestamp presenceUpdatedAt;
+  @NullableTimestampConverter()
+  final Timestamp? presenceUpdatedAt;
   @override
   @JsonKey()
   final MemberStats stats;
@@ -715,7 +715,7 @@ abstract class _Member implements Member {
     @TimestampConverter() required final Timestamp joinedAt,
     final MemberRole role,
     final Presence presence,
-    @TimestampConverter() required final Timestamp presenceUpdatedAt,
+    @NullableTimestampConverter() final Timestamp? presenceUpdatedAt,
     final MemberStats stats,
     final String? fcmToken,
     @JsonKey(defaultValue: true) final bool notificationsEnabled,
@@ -737,8 +737,8 @@ abstract class _Member implements Member {
   @override
   Presence get presence;
   @override
-  @TimestampConverter()
-  Timestamp get presenceUpdatedAt;
+  @NullableTimestampConverter()
+  Timestamp? get presenceUpdatedAt;
   @override
   MemberStats get stats;
   @override

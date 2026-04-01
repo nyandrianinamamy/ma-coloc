@@ -47,8 +47,8 @@ _$MemberImpl _$$MemberImplFromJson(Map<String, dynamic> json) => _$MemberImpl(
       MemberRole.member,
   presence:
       $enumDecodeNullable(_$PresenceEnumMap, json['presence']) ?? Presence.away,
-  presenceUpdatedAt: const TimestampConverter().fromJson(
-    json['presenceUpdatedAt'] as Timestamp,
+  presenceUpdatedAt: const NullableTimestampConverter().fromJson(
+    json['presenceUpdatedAt'] as Timestamp?,
   ),
   stats: json['stats'] == null
       ? const MemberStats()
@@ -65,7 +65,7 @@ Map<String, dynamic> _$$MemberImplToJson(_$MemberImpl instance) =>
       'joinedAt': const TimestampConverter().toJson(instance.joinedAt),
       'role': _$MemberRoleEnumMap[instance.role]!,
       'presence': _$PresenceEnumMap[instance.presence]!,
-      'presenceUpdatedAt': const TimestampConverter().toJson(
+      'presenceUpdatedAt': const NullableTimestampConverter().toJson(
         instance.presenceUpdatedAt,
       ),
       'stats': instance.stats.toJson(),
