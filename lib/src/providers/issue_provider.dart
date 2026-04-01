@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -156,10 +157,14 @@ class IssueActions extends Notifier<AsyncValue<void>> {
 
       String? photoUrl;
       if (photo != null) {
-        photoUrl = await _uploadPhoto(
-          'houses/$houseId/issues/$issueId/photo.jpg',
-          photo,
-        );
+        try {
+          photoUrl = await _uploadPhoto(
+            'houses/$houseId/issues/$issueId/photo.jpg',
+            photo,
+          );
+        } catch (e) {
+          debugPrint('Photo upload failed (continuing without photo): $e');
+        }
       }
 
       final issue = Issue(
