@@ -119,7 +119,7 @@ class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
 // Phase 1 — Camera View
 // ---------------------------------------------------------------------------
 
-class _CameraView extends StatefulWidget {
+class _CameraView extends StatelessWidget {
   const _CameraView({
     super.key,
     required this.onClose,
@@ -128,28 +128,6 @@ class _CameraView extends StatefulWidget {
 
   final VoidCallback onClose;
   final ValueChanged<XFile> onPhotoPicked;
-
-  @override
-  State<_CameraView> createState() => _CameraViewState();
-}
-
-class _CameraViewState extends State<_CameraView> {
-  bool _cameraLaunched = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Auto-launch camera when the view appears
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_cameraLaunched) {
-        _cameraLaunched = true;
-        _pickImage(ImageSource.camera, context);
-      }
-    });
-  }
-
-  VoidCallback get onClose => widget.onClose;
-  ValueChanged<XFile> get onPhotoPicked => widget.onPhotoPicked;
 
   Future<void> _pickImage(ImageSource source, BuildContext context) async {
     try {
