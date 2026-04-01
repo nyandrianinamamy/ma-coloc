@@ -141,14 +141,16 @@ class _CameraView extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
+        final isPermission = e.toString().contains('photo_access_denied') ||
+            e.toString().contains('camera_access_denied');
+        final message = isPermission
+            ? (source == ImageSource.camera
+                ? 'Camera access denied. Please allow camera access in Settings.'
+                : 'Photo library access denied. Please allow access in Settings.')
+            : 'Could not open ${source == ImageSource.camera ? 'camera' : 'photo library'}. Please try again.';
+        debugPrint('ImagePicker error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              source == ImageSource.camera
-                  ? 'Could not access the camera. Please allow camera access in Settings.'
-                  : 'Could not access the photo library. Please allow access in Settings.',
-            ),
-          ),
+          SnackBar(content: Text(message)),
         );
       }
     }
