@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:macoloc/src/features/home/home_screen.dart';
 import 'package:macoloc/src/features/onboarding/house_choice_screen.dart';
 

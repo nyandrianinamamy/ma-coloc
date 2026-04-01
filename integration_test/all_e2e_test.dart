@@ -1,6 +1,6 @@
-/// Single entry point for all E2E tests.
-/// Flutter web integration tests require running all tests in one file
-/// because each `flutter drive` invocation starts a new browser session.
+// Single entry point for all E2E tests.
+// Flutter web integration tests require running all tests in one file
+// because each flutter drive invocation starts a new browser session.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -93,7 +93,7 @@ void main() {
     });
 
     testWidgets('joinHouse callable adds second member', (tester) async {
-      final cred1 = await createTestUser('alice@test.com', 'password123');
+      await createTestUser('alice@test.com', 'password123');
       final functions = FirebaseFunctions.instance;
 
       final createResult =
@@ -110,7 +110,7 @@ void main() {
       final inviteCode = houseDoc.data()!['inviteCode'] as String;
 
       await signOutTestUser();
-      final cred2 = await createTestUser('bob@test.com', 'password123');
+      await createTestUser('bob@test.com', 'password123');
 
       await functions.httpsCallable('joinHouse').call({
         'inviteCode': inviteCode,
@@ -235,8 +235,7 @@ void main() {
       final inviteCode = houseDoc.data()!['inviteCode'] as String;
 
       await signOutTestUser();
-      final cred2 = await createTestUser('bob@test.com', 'password123');
-      final uid2 = cred2.user!.uid;
+      final uid2 = (await createTestUser('bob@test.com', 'password123')).user!.uid;
 
       await functions.httpsCallable('joinHouse').call({
         'inviteCode': inviteCode,
