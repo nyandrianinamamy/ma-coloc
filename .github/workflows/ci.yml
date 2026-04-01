@@ -55,6 +55,7 @@ jobs:
   deploy-indexes:
     name: Deploy Firestore Indexes
     if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    continue-on-error: true
     needs: [flutter, functions]
     runs-on: ubuntu-latest
     steps:

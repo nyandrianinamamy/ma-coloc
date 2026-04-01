@@ -49,13 +49,6 @@
       ]
     },
     {
-      "collectionGroup": "activity",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "issues",
       "queryScope": "COLLECTION",
       "fields": [
