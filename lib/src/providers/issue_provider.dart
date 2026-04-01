@@ -289,4 +289,38 @@ class IssueActions extends Notifier<AsyncValue<void>> {
       }
     });
   }
+
+  /// Archive or unarchive an issue (admin only — enforced by security rules).
+  Future<void> archive({
+    required String houseId,
+    required String issueId,
+    required bool archived,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await _issuesCol(houseId).doc(issueId).update({
+        'archived': archived,
+      });
+    });
+  }
+
+  /// Edit issue title, description, and type (creator only — enforced by security rules).
+  Future<void> edit({
+    required String houseId,
+    required String issueId,
+    String? title,
+    String? description,
+    IssueType? type,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final updates = <String, dynamic>{};
+      if (title != null) updates['title'] = title;
+      if (description != null) updates['description'] = description;
+      if (type != null) updates['type'] = type.name;
+      if (updates.isNotEmpty) {
+        await _issuesCol(houseId).doc(issueId).update(updates);
+      }
+    });
+  }
 }
