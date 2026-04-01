@@ -14,7 +14,6 @@ class MobileShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      extendBody: true,
       floatingActionButton: _CenterFab(
         onTap: () => context.push('/create'),
       ),
