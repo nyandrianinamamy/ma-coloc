@@ -49,6 +49,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>MaColoc needs camera access to take photos of household issues.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MaColoc needs photo library access to attach pictures to issues.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

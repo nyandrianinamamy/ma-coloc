@@ -129,14 +129,28 @@ class _CameraView extends StatelessWidget {
   final VoidCallback onClose;
   final ValueChanged<XFile> onPhotoPicked;
 
-  Future<void> _pickImage(ImageSource source) async {
-    final photo = await ImagePicker().pickImage(
-      source: source,
-      maxWidth: 1024,
-      imageQuality: 85,
-    );
-    if (photo != null) {
-      onPhotoPicked(photo);
+  Future<void> _pickImage(ImageSource source, BuildContext context) async {
+    try {
+      final photo = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1024,
+        imageQuality: 85,
+      );
+      if (photo != null) {
+        onPhotoPicked(photo);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              source == ImageSource.camera
+                  ? 'Could not access the camera. Please allow camera access in Settings.'
+                  : 'Could not access the photo library. Please allow access in Settings.',
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -260,7 +274,7 @@ class _CameraView extends StatelessWidget {
                   children: [
                     // Gallery button
                     GestureDetector(
-                      onTap: () => _pickImage(ImageSource.gallery),
+                      onTap: () => _pickImage(ImageSource.gallery, context),
                       child: Container(
                         width: 52,
                         height: 52,
@@ -281,7 +295,7 @@ class _CameraView extends StatelessWidget {
 
                     // Capture button
                     GestureDetector(
-                      onTap: () => _pickImage(ImageSource.camera),
+                      onTap: () => _pickImage(ImageSource.camera, context),
                       child: Container(
                         width: 80,
                         height: 80,
