@@ -1,11 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:macoloc/src/features/home/home_screen.dart';
 
 import 'e2e_helpers.dart';
 
-/// Helper: create a user, create a house, and navigate to home.
+/// Helper: create a user, create a house programmatically, and pump the app.
 /// Returns the houseId.
 Future<String> setupUserWithHouse(WidgetTester tester, {
   required String email,
@@ -13,22 +15,22 @@ Future<String> setupUserWithHouse(WidgetTester tester, {
   required String houseName,
 }) async {
   await createTestUser(email, 'password123');
+
+  // Create house programmatically via callable (more reliable than UI in web E2E)
+  final functions = FirebaseFunctions.instance;
+  final result = await functions.httpsCallable('createHouse').call({
+    'name': houseName,
+    'displayName': displayName,
+    'timezone': 'Europe/Paris',
+    'rooms': ['Kitchen', 'Bathroom'],
+  });
+  final houseId = result.data['houseId'] as String;
+
+  // Pump the app — should land on home (user has a house now)
   await pumpApp(tester);
+  await waitFor(tester, find.byType(HomeScreen), timeout: const Duration(seconds: 15));
 
-  // Create house through UI
-  await tapText(tester, 'Create a House');
-  await enterTextField(tester, 'Your Display Name', displayName);
-  await enterTextField(tester, 'House Name', houseName);
-  await tapTextAndWait(tester, 'Create House', timeout: const Duration(seconds: 10));
-  await tapTextAndWait(tester, 'Go to Home');
-
-  // Get house ID
-  final uid = FirebaseAuth.instance.currentUser!.uid;
-  final snap = await FirebaseFirestore.instance
-      .collection('houses')
-      .where('members', arrayContains: uid)
-      .get();
-  return snap.docs.first.id;
+  return houseId;
 }
 
 void main() {

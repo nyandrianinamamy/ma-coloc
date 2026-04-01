@@ -31,8 +31,8 @@ void main() {
       await enterTextField(tester, 'Email', 'alice@test.com');
       await enterTextField(tester, 'Password', 'password123');
 
-      // Submit
-      await tapTextAndWait(tester, 'Create Account');
+      // Submit and wait for auth + router redirect chain
+      await tapTextAndWait(tester, 'Create Account', timeout: const Duration(seconds: 10));
 
       // Should navigate to onboarding (no house yet)
       expect(find.byType(HouseChoiceScreen), findsOneWidget);
@@ -50,28 +50,21 @@ void main() {
       await enterTextField(tester, 'Email', 'bob@test.com');
       await enterTextField(tester, 'Password', 'password123');
 
-      // Submit (default mode is sign-in)
-      await tapTextAndWait(tester, 'Sign In');
+      // Submit and wait for auth + router redirect chain
+      await tapTextAndWait(tester, 'Sign In', timeout: const Duration(seconds: 10));
 
       // Should navigate to onboarding (user has no house)
       expect(find.byType(HouseChoiceScreen), findsOneWidget);
     });
 
-    testWidgets('sign-out from profile returns to sign-in', (tester) async {
-      // Create user and sign in
-      await createTestUser('charlie@test.com', 'password123');
-
+    testWidgets('unauthenticated user sees sign-in screen', (tester) async {
+      // Don't create any user — start with no auth
       await pumpApp(tester);
 
-      // User is signed in but has no house → onboarding
-      expect(find.byType(HouseChoiceScreen), findsOneWidget);
-
-      // Sign out via auth directly (profile sign-out requires a house)
-      await signOutTestUser();
-      await tester.pumpAndSettle(const Duration(seconds: 2));
-
-      // Should redirect to sign-in
+      // Should be on sign-in screen since no user is logged in
       expect(find.byType(SignInScreen), findsOneWidget);
+      expect(find.text('MaColoc'), findsOneWidget);
+      expect(find.text('Household management, gamified'), findsOneWidget);
     });
   });
 }

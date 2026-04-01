@@ -88,8 +88,14 @@ Future<ProviderContainer> pumpApp(WidgetTester tester) async {
     ),
   );
 
-  // Let async providers (auth state, house query) settle
-  await tester.pumpAndSettle(const Duration(seconds: 2));
+  // Let async providers (auth state, house query, router redirect) settle.
+  // The chain is: FirebaseAuth.authStateChanges → authStateProvider →
+  // currentHouseIdProvider (Firestore query) → GoRouter redirect.
+  // Pump repeatedly to allow each async step to complete.
+  for (var i = 0; i < 15; i++) {
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+  await tester.pumpAndSettle();
 
   return container;
 }
@@ -124,6 +130,21 @@ Future<void> tapTextAndWait(WidgetTester tester, String text, {Duration timeout 
   await tester.tap(widget);
   // Pump with a timeout to allow async operations
   await tester.pumpAndSettle(const Duration(milliseconds: 500), EnginePhase.sendSemanticsUpdate, timeout);
+}
+
+/// Wait until a finder matches at least one widget, pumping in between.
+/// Throws if the widget doesn't appear within [timeout].
+Future<void> waitFor(WidgetTester tester, Finder finder, {Duration timeout = const Duration(seconds: 15)}) async {
+  final end = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(end)) {
+    await tester.pump(const Duration(milliseconds: 300));
+    if (finder.evaluate().isNotEmpty) return;
+  }
+  // One final settle attempt
+  await tester.pumpAndSettle();
+  if (finder.evaluate().isEmpty) {
+    throw TestFailure('waitFor timed out after $timeout looking for $finder');
+  }
 }
 
 /// Seed a Firestore document directly (for scheduled function side-effects).
