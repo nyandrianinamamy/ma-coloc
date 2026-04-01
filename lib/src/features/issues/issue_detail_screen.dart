@@ -521,26 +521,40 @@ class _PhotoHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Background: colored gradient placeholder
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  typeColor.withValues(alpha: 0.25),
-                  typeColor.withValues(alpha: 0.10),
-                ],
+          // Background: photo or colored gradient placeholder
+          if (issue.photoUrl != null && issue.photoUrl!.isNotEmpty)
+            Image.network(
+              issue.photoUrl!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (_, __, ___) => Container(
+                color: typeColor.withValues(alpha: 0.15),
+                child: Center(
+                  child: Icon(typeIcon, size: 80, color: typeColor.withValues(alpha: 0.35)),
+                ),
+              ),
+            )
+          else
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    typeColor.withValues(alpha: 0.25),
+                    typeColor.withValues(alpha: 0.10),
+                  ],
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  typeIcon,
+                  size: 80,
+                  color: typeColor.withValues(alpha: 0.35),
+                ),
               ),
             ),
-            child: Center(
-              child: Icon(
-                typeIcon,
-                size: 80,
-                color: typeColor.withValues(alpha: 0.35),
-              ),
-            ),
-          ),
 
           // Dark gradient overlay
           Container(
