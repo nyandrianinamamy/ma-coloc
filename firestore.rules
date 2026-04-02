@@ -69,7 +69,14 @@ service cloud.firestore {
            request.resource.data.disputedBy != resource.data.resolvedBy) ||
           // Reacting: only the caller's own key in reactions may change
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"]) &&
-           request.resource.data.reactions.diff(resource.data.reactions).affectedKeys().hasOnly([request.auth.uid]))
+           request.resource.data.reactions.diff(resource.data.reactions).affectedKeys().hasOnly([request.auth.uid])) ||
+          // Archiving: only admins can archive/unarchive
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["archived"]) &&
+           isAdmin(houseId)) ||
+          // Editing: only the creator can edit title, description, type (while still open)
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["title", "description", "type"]) &&
+           resource.data.createdBy == request.auth.uid &&
+           resource.data.status == "open")
         );
 
         // Only admins can delete issues

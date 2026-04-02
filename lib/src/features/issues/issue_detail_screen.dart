@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/house_provider.dart';
 import '../../providers/issue_provider.dart';
 import '../../providers/member_provider.dart';
+import '../../models/member.dart' show MemberRole;
 import '../../theme/app_theme.dart';
 
 class IssueDetailScreen extends ConsumerWidget {
@@ -151,7 +152,9 @@ class IssueDetailScreen extends ConsumerWidget {
       );
     }
 
-    final status = _statusConfig(issue.status);
+    final status = issue.archived
+        ? (color: AppColors.slate400, label: 'ARCHIVED')
+        : _statusConfig(issue.status);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF7),
@@ -165,6 +168,14 @@ class IssueDetailScreen extends ConsumerWidget {
                   issue: issue,
                   status: status,
                   onBack: () => context.pop(),
+                  onMore: () => _showMoreMenu(
+                    context,
+                    ref,
+                    issue: issue,
+                    houseId: houseId,
+                    currentUid: currentUid,
+                    isPlaceholder: isPlaceholder,
+                  ),
                 ),
               ),
 
@@ -342,6 +353,176 @@ class IssueDetailScreen extends ConsumerWidget {
     );
   }
 
+  void _showMoreMenu(
+    BuildContext context,
+    WidgetRef ref, {
+    required Issue issue,
+    required String houseId,
+    required String? currentUid,
+    required bool isPlaceholder,
+  }) {
+    if (isPlaceholder) return;
+    final isCreator = issue.createdBy == currentUid;
+    final members =
+        ref.read(membersStreamProvider(houseId)).valueOrNull ?? [];
+    final currentMember =
+        members.where((m) => m.uid == currentUid).toList();
+    final isAdmin =
+        currentMember.isNotEmpty && currentMember.first.role == MemberRole.admin;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.slate300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (isCreator && issue.status == IssueStatus.open)
+              ListTile(
+                leading:
+                    const Icon(Icons.edit_outlined, color: AppColors.blue),
+                title: Text('Edit Issue',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slate800)),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _showEditSheet(context, ref,
+                      issue: issue, houseId: houseId);
+                },
+              ),
+            if (isAdmin)
+              ListTile(
+                leading: const Icon(Icons.archive_outlined,
+                    color: AppColors.orange),
+                title: Text('Archive Issue',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slate800)),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await ref.read(issueActionsProvider.notifier).archive(
+                      houseId: houseId, issueId: issueId, archived: true);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Issue archived')),
+                    );
+                    context.pop();
+                  }
+                },
+              ),
+            if (!isCreator && !isAdmin)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'No actions available',
+                  style: GoogleFonts.inter(
+                      color: AppColors.slate400, fontWeight: FontWeight.w500),
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    required Issue issue,
+    required String houseId,
+  }) {
+    final titleController = TextEditingController(text: issue.title ?? '');
+    final descController =
+        TextEditingController(text: issue.description ?? '');
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 24, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Edit Issue',
+                style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.slate800)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  ref.read(issueActionsProvider.notifier).edit(
+                        houseId: houseId,
+                        issueId: issueId,
+                        title: titleController.text.trim().isEmpty
+                            ? null
+                            : titleController.text.trim(),
+                        description: descController.text.trim().isEmpty
+                            ? null
+                            : descController.text.trim(),
+                      );
+                },
+                child: Text('Save Changes',
+                    style: GoogleFonts.inter(
+                        fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showDisputeDialog(BuildContext context, WidgetRef ref,
       {required String houseId,
       required String issueId,
@@ -391,11 +572,13 @@ class _StickyHeader extends StatelessWidget {
     required this.issue,
     required this.status,
     required this.onBack,
+    required this.onMore,
   });
 
   final Issue issue;
   final ({Color color, String label}) status;
   final VoidCallback onBack;
+  final VoidCallback onMore;
 
   @override
   Widget build(BuildContext context) {
@@ -443,7 +626,7 @@ class _StickyHeader extends StatelessWidget {
                 ),
               ),
               _CircleButton(
-                onTap: () {},
+                onTap: onMore,
                 child: const Icon(Icons.more_horiz,
                     size: 24, color: AppColors.slate800),
               ),

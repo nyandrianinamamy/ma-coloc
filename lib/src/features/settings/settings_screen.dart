@@ -396,7 +396,31 @@ class _LiveSettingsScreenState extends ConsumerState<_LiveSettingsScreen> {
                     ),
                   ],
                   const SizedBox(height: 28),
-                  _DangerZone(onLeave: _leaveHouse),
+                  _DangerZone(
+                    onLeave: _leaveHouse,
+                    onSignOut: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Sign Out'),
+                          content: const Text('Are you sure you want to sign out?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Sign Out'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true && context.mounted) {
+                        await ref.read(authNotifierProvider.notifier).signOut();
+                      }
+                    },
+                  ),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -449,7 +473,7 @@ class _MockSettingsScreenState extends State<_MockSettingsScreen> {
                   const SizedBox(height: 28),
                   _MockMembersSection(),
                   const SizedBox(height: 28),
-                  _DangerZone(onLeave: () {}),
+                  _DangerZone(onLeave: () {}, onSignOut: () {}),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -1341,42 +1365,79 @@ class _MockMemberRow extends StatelessWidget {
 // ─── Danger Zone ─────────────────────────────────────────────────────────────
 
 class _DangerZone extends StatelessWidget {
-  const _DangerZone({required this.onLeave});
+  const _DangerZone({required this.onLeave, required this.onSignOut});
 
   final VoidCallback onLeave;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onLeave,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.rose50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.rose100),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(
-              Icons.logout_rounded,
-              size: 20,
-              color: AppColors.rose,
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: onLeave,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: AppColors.rose50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.rose100),
             ),
-            SizedBox(width: 10),
-            Text(
-              'Leave House',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.rose,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(
+                  Icons.logout_rounded,
+                  size: 20,
+                  color: AppColors.rose,
+                ),
+                SizedBox(width: 10),
+                Text(
+                  'Leave House',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.rose,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: onSignOut,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: AppColors.slate100,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.slate200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(
+                  Icons.power_settings_new_rounded,
+                  size: 20,
+                  color: AppColors.slate700,
+                ),
+                SizedBox(width: 10),
+                Text(
+                  'Sign Out',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.slate700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
