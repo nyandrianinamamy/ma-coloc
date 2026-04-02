@@ -48,6 +48,7 @@ _$IssueImpl _$$IssueImplFromJson(Map<String, dynamic> json) => _$IssueImpl(
       (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
   points: (json['points'] as num).toInt(),
+  archived: json['archived'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$$IssueImplToJson(
@@ -80,6 +81,7 @@ Map<String, dynamic> _$$IssueImplToJson(
   ),
   'tags': instance.tags,
   'points': instance.points,
+  'archived': instance.archived,
 };
 
 const _$IssueTypeEnumMap = {

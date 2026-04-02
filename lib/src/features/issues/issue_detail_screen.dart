@@ -152,7 +152,9 @@ class IssueDetailScreen extends ConsumerWidget {
       );
     }
 
-    final status = _statusConfig(issue.status);
+    final status = issue.archived
+        ? (color: AppColors.slate400, label: 'ARCHIVED')
+        : _statusConfig(issue.status);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF7),
