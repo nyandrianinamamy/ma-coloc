@@ -48,7 +48,8 @@ mixin _$Issue {
   @NullableTimestampConverter()
   Timestamp? get closedAt => throw _privateConstructorUsedError; // Categorization
   List<String> get tags => throw _privateConstructorUsedError;
-  int get points => throw _privateConstructorUsedError;
+  int get points => throw _privateConstructorUsedError; // Archive
+  bool get archived => throw _privateConstructorUsedError;
 
   /// Serializes this Issue to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -88,6 +89,7 @@ abstract class $IssueCopyWith<$Res> {
     @NullableTimestampConverter() Timestamp? closedAt,
     List<String> tags,
     int points,
+    bool archived,
   });
 }
 
@@ -129,6 +131,7 @@ class _$IssueCopyWithImpl<$Res, $Val extends Issue>
     Object? closedAt = freezed,
     Object? tags = null,
     Object? points = null,
+    Object? archived = null,
   }) {
     return _then(
       _value.copyWith(
@@ -224,6 +227,10 @@ class _$IssueCopyWithImpl<$Res, $Val extends Issue>
                 ? _value.points
                 : points // ignore: cast_nullable_to_non_nullable
                       as int,
+            archived: null == archived
+                ? _value.archived
+                : archived // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -262,6 +269,7 @@ abstract class _$$IssueImplCopyWith<$Res> implements $IssueCopyWith<$Res> {
     @NullableTimestampConverter() Timestamp? closedAt,
     List<String> tags,
     int points,
+    bool archived,
   });
 }
 
@@ -302,6 +310,7 @@ class __$$IssueImplCopyWithImpl<$Res>
     Object? closedAt = freezed,
     Object? tags = null,
     Object? points = null,
+    Object? archived = null,
   }) {
     return _then(
       _$IssueImpl(
@@ -397,6 +406,10 @@ class __$$IssueImplCopyWithImpl<$Res>
             ? _value.points
             : points // ignore: cast_nullable_to_non_nullable
                   as int,
+        archived: null == archived
+            ? _value.archived
+            : archived // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -429,6 +442,7 @@ class _$IssueImpl extends _Issue {
     @NullableTimestampConverter() this.closedAt,
     final List<String> tags = const [],
     required this.points,
+    this.archived = false,
   }) : _reactions = reactions,
        _tags = tags,
        super._();
@@ -508,10 +522,14 @@ class _$IssueImpl extends _Issue {
 
   @override
   final int points;
+  // Archive
+  @override
+  @JsonKey()
+  final bool archived;
 
   @override
   String toString() {
-    return 'Issue(id: $id, type: $type, title: $title, description: $description, photoUrl: $photoUrl, createdBy: $createdBy, anonymous: $anonymous, createdAt: $createdAt, assignedTo: $assignedTo, assignedAt: $assignedAt, status: $status, resolvedBy: $resolvedBy, resolvedAt: $resolvedAt, resolutionPhotoUrl: $resolutionPhotoUrl, resolutionNote: $resolutionNote, disputedBy: $disputedBy, disputeAgainst: $disputeAgainst, disputeReason: $disputeReason, reactions: $reactions, autoCloseAt: $autoCloseAt, closedAt: $closedAt, tags: $tags, points: $points)';
+    return 'Issue(id: $id, type: $type, title: $title, description: $description, photoUrl: $photoUrl, createdBy: $createdBy, anonymous: $anonymous, createdAt: $createdAt, assignedTo: $assignedTo, assignedAt: $assignedAt, status: $status, resolvedBy: $resolvedBy, resolvedAt: $resolvedAt, resolutionPhotoUrl: $resolutionPhotoUrl, resolutionNote: $resolutionNote, disputedBy: $disputedBy, disputeAgainst: $disputeAgainst, disputeReason: $disputeReason, reactions: $reactions, autoCloseAt: $autoCloseAt, closedAt: $closedAt, tags: $tags, points: $points, archived: $archived)';
   }
 
   @override
@@ -560,7 +578,9 @@ class _$IssueImpl extends _Issue {
             (identical(other.closedAt, closedAt) ||
                 other.closedAt == closedAt) &&
             const DeepCollectionEquality().equals(other._tags, _tags) &&
-            (identical(other.points, points) || other.points == points));
+            (identical(other.points, points) || other.points == points) &&
+            (identical(other.archived, archived) ||
+                other.archived == archived));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -590,6 +610,7 @@ class _$IssueImpl extends _Issue {
     closedAt,
     const DeepCollectionEquality().hash(_tags),
     points,
+    archived,
   ]);
 
   /// Create a copy of Issue
@@ -631,6 +652,7 @@ abstract class _Issue extends Issue {
     @NullableTimestampConverter() final Timestamp? closedAt,
     final List<String> tags,
     required final int points,
+    final bool archived,
   }) = _$IssueImpl;
   const _Issue._() : super._();
 
@@ -687,6 +709,8 @@ abstract class _Issue extends Issue {
   List<String> get tags;
   @override
   int get points;
+  @override
+  bool get archived;
 
   /// Create a copy of Issue
   /// with the given fields replaced by the non-null parameter values.

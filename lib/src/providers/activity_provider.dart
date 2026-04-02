@@ -87,8 +87,8 @@ final activityFeedProvider =
         data: (recentResolved) {
           final items = <ActivityItem>[];
 
-          // From recent issues — only 'created' events
-          for (final issue in recentIssues) {
+          // From recent issues — only 'created' events (exclude archived)
+          for (final issue in recentIssues.where((i) => !i.archived)) {
             items.add(ActivityItem(
               type: 'created',
               userName: issue.anonymous ? 'Anonymous' : resolveName(issue.createdBy),
@@ -98,8 +98,8 @@ final activityFeedProvider =
             ));
           }
 
-          // From recently resolved issues — only 'resolved' events
-          for (final issue in recentResolved) {
+          // From recently resolved issues — only 'resolved' events (exclude archived)
+          for (final issue in recentResolved.where((i) => !i.archived)) {
             if (issue.resolvedBy != null && issue.resolvedAt != null) {
               items.add(ActivityItem(
                 type: 'resolved',

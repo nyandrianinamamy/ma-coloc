@@ -64,6 +64,8 @@ class Issue with _$Issue {
     // Categorization
     @Default([]) List<String> tags,
     required int points,
+    // Archive
+    @Default(false) bool archived,
   }) = _Issue;
 
   factory Issue.fromJson(Map<String, dynamic> json) => _$IssueFromJson(json);
