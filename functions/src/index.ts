@@ -14,3 +14,6 @@ export { completeRoom } from "./callables/complete-room";
 export { updateStreaks } from "./scheduled/update-streaks";
 export { updateHouse } from "./callables/update-house";
 export { updateMemberRole } from "./callables/update-member-role";
+export { resetHouseData } from "./callables/reset-house-data";
+export { deleteAccount } from "./callables/delete-account";
+export { purgeArchivedIssues } from "./callables/purge-archived-issues";

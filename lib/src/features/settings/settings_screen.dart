@@ -360,6 +360,41 @@ class _LiveSettingsScreenState extends ConsumerState<_LiveSettingsScreen> {
                     isAdmin: widget.isAdmin,
                     onMemberLongPress: _showMemberOptions,
                   ),
+                  if (widget.isAdmin) ...[
+                    const SizedBox(height: 28),
+                    GestureDetector(
+                      onTap: () => context.push('/data-privacy'),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.shield_outlined,
+                                size: 20, color: AppColors.slate700),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Data & Privacy',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.slate700,
+                                ),
+                              ),
+                            ),
+                            Icon(Icons.chevron_right,
+                                size: 20, color: AppColors.slate400),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 28),
                   _DangerZone(
                     onLeave: _leaveHouse,

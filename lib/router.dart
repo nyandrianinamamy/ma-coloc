@@ -19,6 +19,7 @@ import 'src/features/issues/issue_detail_screen.dart';
 import 'src/features/leaderboard/leaderboard_screen.dart';
 import 'src/features/profile/profile_screen.dart';
 import 'src/features/settings/settings_screen.dart';
+import 'src/features/settings/data_privacy_screen.dart';
 import 'src/features/deep_clean/deep_clean_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -154,6 +155,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/clean',
         builder: (context, state) => const DeepCleanScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/data-privacy',
+        builder: (context, state) => const DataPrivacyScreen(),
       ),
 
       GoRoute(
