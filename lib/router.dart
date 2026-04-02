@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'firebase_options.dart';
 import 'src/providers/auth_provider.dart';
 import 'src/providers/house_provider.dart';
+import 'src/features/onboarding/welcome_screen.dart';
 import 'src/features/onboarding/sign_in_screen.dart';
 import 'src/features/onboarding/house_choice_screen.dart';
 import 'src/features/onboarding/create_house_screen.dart';
@@ -34,22 +35,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (kDebugMode && DefaultFirebaseOptions.isPlaceholder) {
         // Allow free navigation — go to /home if on root or sign-in
         if (state.matchedLocation == '/' ||
-            state.matchedLocation == '/sign-in') {
+            state.matchedLocation == '/sign-in' ||
+            state.matchedLocation == '/welcome') {
           return '/home';
         }
         return null;
       }
 
       final isLoggedIn = authState.valueOrNull != null;
-      final isOnAuthPage = state.matchedLocation == '/sign-in';
+      final isOnAuthPage = state.matchedLocation == '/sign-in' ||
+          state.matchedLocation == '/welcome';
       final isOnOnboarding = state.matchedLocation.startsWith('/onboarding');
       final isLoading = authState.isLoading || houseIdAsync.isLoading;
 
       // While auth or house query is loading, stay put (show splash/loading)
       if (isLoading) return null;
 
-      // Not logged in -> sign-in
-      if (!isLoggedIn && !isOnAuthPage) return '/sign-in';
+      // Not logged in -> welcome
+      if (!isLoggedIn && !isOnAuthPage) return '/welcome';
       // Logged in but on sign-in page -> onboarding or home
       if (isLoggedIn && isOnAuthPage) {
         return houseIdAsync.valueOrNull != null ? '/home' : '/onboarding';
@@ -62,6 +65,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/welcome',
+        builder: (context, state) => const WelcomeScreen(),
+      ),
       GoRoute(
         path: '/sign-in',
         builder: (context, state) => const SignInScreen(),
@@ -151,7 +158,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/',
-        redirect: (context, state) => '/sign-in',
+        redirect: (context, state) => '/welcome',
       ),
     ],
   );

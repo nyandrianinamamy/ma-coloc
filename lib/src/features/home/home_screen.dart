@@ -928,13 +928,23 @@ class _ActivityItem extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _dotColor.withValues(alpha: 0.12),
+                      color: _dotColor,
+                      border: Border.all(
+                        color: AppColors.background,
+                        width: 4,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 4,
+                        ),
+                      ],
                     ),
-                    child: Icon(_dotIcon, color: _dotColor, size: 18),
+                    child: Icon(_dotIcon, color: Colors.white, size: 16),
                   ),
                   if (!isLast)
                     Expanded(
@@ -951,68 +961,70 @@ class _ActivityItem extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 16, 12),
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
                           children: [
-                            RichText(
-                              text: TextSpan(
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textPrimary,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: activity.user.name.split(' ').first,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary),
-                                  ),
-                                  TextSpan(
-                                    text: _verb,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w400,
-                                        color: AppColors.textSecondary),
-                                  ),
-                                  TextSpan(
-                                    text: '"${activity.issue.title}"',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary),
-                                  ),
-                                ],
-                              ),
+                            TextSpan(
+                              text: activity.user.name.split(' ').first,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary),
+                            ),
+                            TextSpan(text: _verb),
+                            TextSpan(
+                              text: '"${activity.issue.title}"',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      const SizedBox(height: 8),
+                      Row(
                         children: [
                           Text(
                             activity.time,
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.textTertiary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                           if (_points > 0) ...[
-                            const SizedBox(height: 4),
+                            Container(
+                              width: 4,
+                              height: 4,
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.slate300,
+                              ),
+                            ),
                             Text(
                               '+$_points pts',
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.emerald,
                               ),
@@ -1120,13 +1132,23 @@ class _LiveActivityItem extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _dotColor.withValues(alpha: 0.12),
+                      color: _dotColor,
+                      border: Border.all(
+                        color: AppColors.background,
+                        width: 4,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 4,
+                        ),
+                      ],
                     ),
-                    child: Icon(_dotIcon, color: _dotColor, size: 18),
+                    child: Icon(_dotIcon, color: Colors.white, size: 16),
                   ),
                   if (!isLast)
                     Expanded(
@@ -1143,69 +1165,71 @@ class _LiveActivityItem extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 16, 12),
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
                           children: [
-                            RichText(
-                              text: TextSpan(
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textPrimary,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: activity.userName.split(' ').first,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary),
-                                  ),
-                                  TextSpan(
-                                    text: _verb,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w400,
-                                        color: AppColors.textSecondary),
-                                  ),
-                                  TextSpan(
-                                    text: '"${activity.detail}"',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary),
-                                  ),
-                                ],
-                              ),
+                            TextSpan(
+                              text: activity.userName.split(' ').first,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary),
+                            ),
+                            TextSpan(text: _verb),
+                            TextSpan(
+                              text: '"${activity.detail}"',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      const SizedBox(height: 8),
+                      Row(
                         children: [
                           Text(
                             _formatTime(activity.timestamp),
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.textTertiary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                           if (activity.points != null &&
                               activity.points! > 0) ...[
-                            const SizedBox(height: 4),
+                            Container(
+                              width: 4,
+                              height: 4,
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.slate300,
+                              ),
+                            ),
                             Text(
                               '+${activity.points} pts',
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.emerald,
                               ),
