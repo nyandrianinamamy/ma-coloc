@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../theme/app_logo.dart';
 import '../../theme/app_theme.dart';
 
 class WelcomeScreen extends ConsumerWidget {
@@ -147,75 +148,8 @@ class _LogoSectionState extends State<_LogoSection>
                   ),
                 ),
 
-                // House icon card
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.slate900.withValues(alpha: 0.1),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 6,
-                    ),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Subtle gradient at top
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: 48,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(22),
-                            ),
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                AppColors.emerald50,
-                                AppColors.emerald50.withValues(alpha: 0),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // House icon + dots
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.home_outlined,
-                            size: 38,
-                            color: AppColors.slate800,
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _dot(const Color(0xFF34D399)),
-                              const SizedBox(width: 6),
-                              _dot(const Color(0xFF2DD4BF)),
-                              const SizedBox(width: 6),
-                              _dot(const Color(0xFF60A5FA)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                // House icon card (reusable logo widget)
+                const AppLogo(size: 96),
               ],
             ),
           ),
@@ -239,23 +173,6 @@ class _LogoSectionState extends State<_LogoSection>
               fontWeight: FontWeight.w500,
               color: AppColors.slate500,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dot(Color color) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 4,
           ),
         ],
       ),
