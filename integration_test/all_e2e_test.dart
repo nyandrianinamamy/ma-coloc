@@ -8,7 +8,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 import 'package:macoloc/src/features/onboarding/sign_in_screen.dart';
+import 'package:macoloc/src/features/onboarding/welcome_screen.dart';
 import 'package:macoloc/src/features/onboarding/house_choice_screen.dart';
 import 'package:macoloc/src/features/home/home_screen.dart';
 
@@ -449,6 +451,42 @@ void main() {
 
       await pumpApp(tester);
       expect(find.byType(HomeScreen), findsOneWidget);
+    });
+  });
+
+  // ── Demo Flow ─────────────────────────────────────────────────
+
+  group('Demo Flow', () {
+    testWidgets('explore with demo data seeds house and exit cleans up', (tester) async {
+      await pumpApp(tester);
+
+      // Unauthenticated → should be on welcome screen
+      expect(find.byType(WelcomeScreen), findsOneWidget);
+      expect(find.text('Explore with demo data'), findsOneWidget);
+
+      // Tap demo button → triggers anonymous auth + seedDemoHouse callable
+      await tester.tap(find.text('Explore with demo data'));
+      await waitForAsync(tester, find.byType(HomeScreen),
+          timeout: const Duration(seconds: 30));
+
+      // Demo house should be visible
+      expect(find.textContaining('Appart Rue Exemple'), findsOneWidget);
+
+      // Navigate to Profile tab → Settings
+      await tapText(tester, 'Profile');
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+
+      // Tap Exit Demo → confirm dialog
+      await tapText(tester, 'Exit Demo');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Exit Demo').last);
+      await tester.pumpAndSettle();
+
+      // Should return to welcome screen after cleanup
+      await waitForAsync(tester, find.byType(WelcomeScreen),
+          timeout: const Duration(seconds: 30));
+      expect(find.text('Explore with demo data'), findsOneWidget);
     });
   });
 }
