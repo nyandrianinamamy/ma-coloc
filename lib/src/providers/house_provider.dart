@@ -95,4 +95,22 @@ class HouseActions extends Notifier<AsyncValue<void>> {
     await functions.httpsCallable('leaveHouse').call({'houseId': houseId});
     ref.invalidate(currentHouseIdProvider);
   }
+
+  Future<String> seedDemoHouse() async {
+    final functions = ref.read(firebaseFunctionsProvider);
+    final result = await functions
+        .httpsCallable('seedDemoHouse')
+        .call<Map<String, dynamic>>({});
+    final houseId = result.data['houseId'] as String;
+    ref.invalidate(currentHouseIdProvider);
+    return houseId;
+  }
+
+  Future<void> cleanupDemoHouse(String houseId) async {
+    final functions = ref.read(firebaseFunctionsProvider);
+    await functions
+        .httpsCallable('cleanupDemoHouse')
+        .call({'houseId': houseId});
+    ref.invalidate(currentHouseIdProvider);
+  }
 }
