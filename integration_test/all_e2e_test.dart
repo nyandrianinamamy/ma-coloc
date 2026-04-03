@@ -46,9 +46,13 @@ void main() {
 
       // Go to sign-in screen
       await tapText(tester, 'Log In with Email');
+      // Wait for SignInScreen to render
+      await waitFor(tester, find.text('Sign In'), timeout: const Duration(seconds: 10));
+
+      // Toggle to sign-up mode ("Sign up" is a TextSpan inside RichText)
+      await tester.tap(find.text('Sign up'));
       for (var i = 0; i < 10; i++) { await tester.pump(const Duration(milliseconds: 200)); }
 
-      await tapText(tester, "Don't have an account? Sign up");
       await enterTextField(tester, 'Email', 'alice@test.com');
       await enterTextField(tester, 'Password', 'password123');
 
@@ -63,7 +67,8 @@ void main() {
       await pumpApp(tester, firestore: firestore, auth: auth, functions: functions);
 
       await tapText(tester, 'Log In with Email');
-      for (var i = 0; i < 10; i++) { await tester.pump(const Duration(milliseconds: 200)); }
+      // Wait for SignInScreen to render
+      await waitFor(tester, find.text('Sign In'), timeout: const Duration(seconds: 10));
 
       await enterTextField(tester, 'Email', 'bob@test.com');
       await enterTextField(tester, 'Password', 'password123');
