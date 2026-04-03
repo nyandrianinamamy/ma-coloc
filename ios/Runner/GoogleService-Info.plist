@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>53644947761-jihucdc6qfg60g2vvuj5vp18e4haab89.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.53644947761-jihucdc6qfg60g2vvuj5vp18e4haab89</string>
 	<key>API_KEY</key>
 	<string>AIzaSyDGrn8ZOStH6oNUSgkR_v1K9-hvlMXhLew</string>
 	<key>GCM_SENDER_ID</key>
@@ -9,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>dev.mamy-r.macoloc</string>
+	<string>com.macoloc.macoloc.RunnerTests</string>
 	<key>PROJECT_ID</key>
 	<string>ma-coloc-87f1b</string>
 	<key>STORAGE_BUCKET</key>
