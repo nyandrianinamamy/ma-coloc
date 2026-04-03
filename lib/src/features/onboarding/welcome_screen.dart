@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../providers/house_provider.dart';
 import '../../theme/app_logo.dart';
 import '../../theme/app_theme.dart';
 
@@ -44,6 +45,16 @@ class WelcomeScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               _EmailButton(
                 onTap: () => context.go('/sign-in'),
+              ),
+              const SizedBox(height: 16),
+              _DemoButton(
+                isLoading: authState.isLoading,
+                onTap: () async {
+                  final auth = ref.read(authNotifierProvider.notifier);
+                  final houseActions = ref.read(houseActionsProvider.notifier);
+                  await auth.signInAnonymously();
+                  await houseActions.seedDemoHouse();
+                },
               ),
               const SizedBox(height: 32),
             ],
@@ -278,6 +289,38 @@ class _EmailButton extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Demo explore button
+// ---------------------------------------------------------------------------
+class _DemoButton extends StatelessWidget {
+  const _DemoButton({required this.isLoading, required this.onTap});
+
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: double.infinity,
+        height: 48,
+        alignment: Alignment.center,
+        child: Text(
+          'Explore with demo data',
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.slate500,
+            decoration: TextDecoration.underline,
+            decorationColor: AppColors.slate300,
+          ),
         ),
       ),
     );
