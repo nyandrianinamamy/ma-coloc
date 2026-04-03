@@ -17,3 +17,4 @@ export { updateMemberRole } from "./callables/update-member-role";
 export { resetHouseData } from "./callables/reset-house-data";
 export { deleteAccount } from "./callables/delete-account";
 export { purgeArchivedIssues } from "./callables/purge-archived-issues";
+export { seedDemoHouse } from "./callables/seed-demo-house";
