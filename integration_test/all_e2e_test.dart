@@ -47,7 +47,7 @@ void main() {
       // Go to sign-in screen
       await tapText(tester, 'Log In with Email');
       // Wait for SignInScreen to render
-      await waitFor(tester, find.text('Sign In'), timeout: const Duration(seconds: 10));
+      await waitFor(tester, find.text('Welcome back!'), timeout: const Duration(seconds: 10));
 
       // Toggle to sign-up mode ("Sign up" is a TextSpan inside RichText)
       await tester.tap(find.text('Sign up'));
@@ -68,12 +68,13 @@ void main() {
 
       await tapText(tester, 'Log In with Email');
       // Wait for SignInScreen to render
-      await waitFor(tester, find.text('Sign In'), timeout: const Duration(seconds: 10));
+      await waitFor(tester, find.text('Welcome back!'), timeout: const Duration(seconds: 10));
 
       await enterTextField(tester, 'Email', 'bob@test.com');
       await enterTextField(tester, 'Password', 'password123');
 
-      await tester.tap(find.text('Sign In'));
+      // 'Log In' button text on SignInScreen
+      await tester.tap(find.text('Log In').first);
       await waitFor(tester, find.byType(HouseChoiceScreen), timeout: const Duration(seconds: 30));
     });
   });
