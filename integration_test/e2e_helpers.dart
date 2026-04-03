@@ -25,14 +25,15 @@ Future<({
   FirebaseAuth auth,
   FirebaseFunctions functions,
 })> connectEmulators() async {
-  // Use a demo-project config. The apiKey/appId don't matter for emulators,
-  // but projectId must match the emulator --project flag.
+  // Use a demo-project config. apiKey must look valid for the Firebase JS SDK
+  // on web (starts with 'AIzaSy'), but doesn't need to be a real key for emulators.
   await Firebase.initializeApp(
     options: const FirebaseOptions(
-      apiKey: 'demo-key',
+      apiKey: 'AIzaSyDemoKeyForEmulatorTestingOnly0000',
       appId: '1:000000000000:web:0000000000000000',
       messagingSenderId: '000000000000',
       projectId: _projectId,
+      authDomain: '$_projectId.firebaseapp.com',
       storageBucket: '$_projectId.appspot.com',
     ),
   );
@@ -116,11 +117,12 @@ Future<ProviderContainer> pumpApp(
     ),
   );
 
-  // Let async providers settle: auth state → house query → router redirect
-  for (var i = 0; i < 15; i++) {
+  // Let async providers settle: auth state → house query → router redirect.
+  // Use pump() not pumpAndSettle() because WelcomeScreen has an infinite
+  // AnimationController.repeat() that prevents settling.
+  for (var i = 0; i < 20; i++) {
     await tester.pump(const Duration(milliseconds: 300));
   }
-  await tester.pumpAndSettle();
 
   return container;
 }
@@ -150,21 +152,30 @@ Future<void> signOutTestUser() async {
 Future<void> enterTextField(WidgetTester tester, String label, String text) async {
   final field = find.widgetWithText(TextField, label);
   await tester.enterText(field, text);
-  await tester.pumpAndSettle();
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
 }
 
 /// Tap a widget containing the given text.
 Future<void> tapText(WidgetTester tester, String text) async {
   final widget = find.text(text);
   await tester.tap(widget);
-  await tester.pumpAndSettle(const Duration(seconds: 1));
+  // Use pump() loop instead of pumpAndSettle() to avoid hanging on
+  // screens with infinite animations (e.g. WelcomeScreen blob rotation).
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
 }
 
 /// Tap a widget containing the given text, waiting longer for async operations.
 Future<void> tapTextAndWait(WidgetTester tester, String text, {Duration timeout = const Duration(seconds: 5)}) async {
   final widget = find.text(text);
   await tester.tap(widget);
-  await tester.pumpAndSettle(const Duration(milliseconds: 500), EnginePhase.sendSemanticsUpdate, timeout);
+  final end = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(end)) {
+    await tester.pump(const Duration(milliseconds: 300));
+  }
 }
 
 /// Wait until a finder matches at least one widget, pumping in between.
@@ -174,7 +185,10 @@ Future<void> waitFor(WidgetTester tester, Finder finder, {Duration timeout = con
     await tester.pump(const Duration(milliseconds: 300));
     if (finder.evaluate().isNotEmpty) return;
   }
-  await tester.pumpAndSettle();
+  // Final pump cycle
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
   if (finder.evaluate().isEmpty) {
     throw TestFailure('waitFor timed out after $timeout looking for $finder');
   }
@@ -188,7 +202,10 @@ Future<void> waitForAsync(WidgetTester tester, Finder finder, {Duration timeout 
     await tester.pump();
     if (finder.evaluate().isNotEmpty) return;
   }
-  await tester.pumpAndSettle();
+  // Final pump cycle
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
   if (finder.evaluate().isEmpty) {
     throw TestFailure('waitForAsync timed out after $timeout looking for $finder');
   }

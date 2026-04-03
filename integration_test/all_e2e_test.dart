@@ -46,7 +46,7 @@ void main() {
 
       // Go to sign-in screen
       await tapText(tester, 'Log In with Email');
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 10; i++) { await tester.pump(const Duration(milliseconds: 200)); }
 
       await tapText(tester, "Don't have an account? Sign up");
       await enterTextField(tester, 'Email', 'alice@test.com');
@@ -63,7 +63,7 @@ void main() {
       await pumpApp(tester, firestore: firestore, auth: auth, functions: functions);
 
       await tapText(tester, 'Log In with Email');
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 10; i++) { await tester.pump(const Duration(milliseconds: 200)); }
 
       await enterTextField(tester, 'Email', 'bob@test.com');
       await enterTextField(tester, 'Password', 'password123');
@@ -160,19 +160,19 @@ void main() {
       expect(find.byType(HomeScreen), findsOneWidget);
 
       await tapText(tester, 'Issues');
-      await tester.pumpAndSettle(const Duration(seconds: 2));
+      for (var i = 0; i < 15; i++) { await tester.pump(const Duration(milliseconds: 200)); }
 
       expect(find.text('Dirty dishes'), findsOneWidget);
 
       await tapText(tester, 'Dirty dishes');
-      await tester.pumpAndSettle(const Duration(seconds: 2));
+      for (var i = 0; i < 15; i++) { await tester.pump(const Duration(milliseconds: 200)); }
 
       expect(find.textContaining('Claim Issue'), findsOneWidget);
       await tapTextAndWait(tester, 'Claim Issue (+50 pts)');
 
       expect(find.text('Mark Resolved'), findsOneWidget);
       await tester.tap(find.text('Mark Resolved'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 10; i++) { await tester.pump(const Duration(milliseconds: 200)); }
       await tapTextAndWait(tester, 'Confirm Resolution');
 
       final issuesSnap = await firestore
@@ -434,12 +434,12 @@ void main() {
 
       await tapText(tester, 'Profile');
       await tester.tap(find.byIcon(Icons.settings_outlined));
-      await tester.pumpAndSettle(const Duration(seconds: 2));
+      for (var i = 0; i < 15; i++) { await tester.pump(const Duration(milliseconds: 200)); }
 
       await tapText(tester, 'Exit Demo');
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 10; i++) { await tester.pump(const Duration(milliseconds: 200)); }
       await tester.tap(find.text('Exit Demo').last);
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 10; i++) { await tester.pump(const Duration(milliseconds: 200)); }
 
       await waitForAsync(tester, find.byType(WelcomeScreen),
           timeout: const Duration(seconds: 30));
