@@ -48,7 +48,6 @@ class WelcomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               _DemoButton(
-                isLoading: authState.isLoading,
                 onTap: () async {
                   try {
                     final cred =
@@ -309,30 +308,55 @@ class _EmailButton extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Demo explore button
 // ---------------------------------------------------------------------------
-class _DemoButton extends StatelessWidget {
-  const _DemoButton({required this.isLoading, required this.onTap});
+class _DemoButton extends StatefulWidget {
+  const _DemoButton({required this.onTap});
 
-  final bool isLoading;
-  final VoidCallback onTap;
+  final Future<void> Function() onTap;
+
+  @override
+  State<_DemoButton> createState() => _DemoButtonState();
+}
+
+class _DemoButtonState extends State<_DemoButton> {
+  bool _isLoading = false;
+
+  Future<void> _handleTap() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await widget.onTap();
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: isLoading ? null : onTap,
+      onTap: _handleTap,
       child: Container(
         width: double.infinity,
         height: 48,
         alignment: Alignment.center,
-        child: Text(
-          'Explore with demo data',
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: AppColors.slate500,
-            decoration: TextDecoration.underline,
-            decorationColor: AppColors.slate300,
-          ),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation(AppColors.slate400),
+                ),
+              )
+            : Text(
+                'Explore with demo data',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate500,
+                  decoration: TextDecoration.underline,
+                  decorationColor: AppColors.slate300,
+                ),
+              ),
       ),
     );
   }
