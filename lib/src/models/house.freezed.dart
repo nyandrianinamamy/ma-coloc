@@ -33,6 +33,7 @@ mixin _$House {
   String? get lastResetDate => throw _privateConstructorUsedError;
   String? get lastDeepCleanMonth => throw _privateConstructorUsedError;
   HouseSettings get settings => throw _privateConstructorUsedError;
+  bool get isDemo => throw _privateConstructorUsedError;
 
   /// Serializes this House to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -60,6 +61,7 @@ abstract class $HouseCopyWith<$Res> {
     String? lastResetDate,
     String? lastDeepCleanMonth,
     HouseSettings settings,
+    bool isDemo,
   });
 
   $HouseSettingsCopyWith<$Res> get settings;
@@ -91,6 +93,7 @@ class _$HouseCopyWithImpl<$Res, $Val extends House>
     Object? lastResetDate = freezed,
     Object? lastDeepCleanMonth = freezed,
     Object? settings = null,
+    Object? isDemo = null,
   }) {
     return _then(
       _value.copyWith(
@@ -138,6 +141,10 @@ class _$HouseCopyWithImpl<$Res, $Val extends House>
                 ? _value.settings
                 : settings // ignore: cast_nullable_to_non_nullable
                       as HouseSettings,
+            isDemo: null == isDemo
+                ? _value.isDemo
+                : isDemo // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -174,6 +181,7 @@ abstract class _$$HouseImplCopyWith<$Res> implements $HouseCopyWith<$Res> {
     String? lastResetDate,
     String? lastDeepCleanMonth,
     HouseSettings settings,
+    bool isDemo,
   });
 
   @override
@@ -205,6 +213,7 @@ class __$$HouseImplCopyWithImpl<$Res>
     Object? lastResetDate = freezed,
     Object? lastDeepCleanMonth = freezed,
     Object? settings = null,
+    Object? isDemo = null,
   }) {
     return _then(
       _$HouseImpl(
@@ -252,6 +261,10 @@ class __$$HouseImplCopyWithImpl<$Res>
             ? _value.settings
             : settings // ignore: cast_nullable_to_non_nullable
                   as HouseSettings,
+        isDemo: null == isDemo
+            ? _value.isDemo
+            : isDemo // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -273,6 +286,7 @@ class _$HouseImpl implements _House {
     this.lastResetDate,
     this.lastDeepCleanMonth,
     this.settings = const HouseSettings(),
+    this.isDemo = false,
   }) : _members = members,
        _rooms = rooms;
 
@@ -315,10 +329,13 @@ class _$HouseImpl implements _House {
   @override
   @JsonKey()
   final HouseSettings settings;
+  @override
+  @JsonKey()
+  final bool isDemo;
 
   @override
   String toString() {
-    return 'House(id: $id, name: $name, createdBy: $createdBy, createdAt: $createdAt, inviteCode: $inviteCode, members: $members, rooms: $rooms, timezone: $timezone, lastResetDate: $lastResetDate, lastDeepCleanMonth: $lastDeepCleanMonth, settings: $settings)';
+    return 'House(id: $id, name: $name, createdBy: $createdBy, createdAt: $createdAt, inviteCode: $inviteCode, members: $members, rooms: $rooms, timezone: $timezone, lastResetDate: $lastResetDate, lastDeepCleanMonth: $lastDeepCleanMonth, settings: $settings, isDemo: $isDemo)';
   }
 
   @override
@@ -343,7 +360,8 @@ class _$HouseImpl implements _House {
             (identical(other.lastDeepCleanMonth, lastDeepCleanMonth) ||
                 other.lastDeepCleanMonth == lastDeepCleanMonth) &&
             (identical(other.settings, settings) ||
-                other.settings == settings));
+                other.settings == settings) &&
+            (identical(other.isDemo, isDemo) || other.isDemo == isDemo));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -361,6 +379,7 @@ class _$HouseImpl implements _House {
     lastResetDate,
     lastDeepCleanMonth,
     settings,
+    isDemo,
   );
 
   /// Create a copy of House
@@ -390,6 +409,7 @@ abstract class _House implements House {
     final String? lastResetDate,
     final String? lastDeepCleanMonth,
     final HouseSettings settings,
+    final bool isDemo,
   }) = _$HouseImpl;
 
   factory _House.fromJson(Map<String, dynamic> json) = _$HouseImpl.fromJson;
@@ -417,6 +437,8 @@ abstract class _House implements House {
   String? get lastDeepCleanMonth;
   @override
   HouseSettings get settings;
+  @override
+  bool get isDemo;
 
   /// Create a copy of House
   /// with the given fields replaced by the non-null parameter values.
