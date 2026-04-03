@@ -9,7 +9,6 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:macoloc/app.dart';
 import 'package:macoloc/main.dart' show firebaseInitializedProvider;
-import 'package:macoloc/firebase_options.dart';
 import 'package:macoloc/src/providers/auth_provider.dart';
 import 'package:macoloc/src/providers/house_provider.dart';
 
@@ -26,8 +25,16 @@ Future<({
   FirebaseAuth auth,
   FirebaseFunctions functions,
 })> connectEmulators() async {
+  // Use a demo-project config. The apiKey/appId don't matter for emulators,
+  // but projectId must match the emulator --project flag.
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.web.copyWith(projectId: _projectId),
+    options: const FirebaseOptions(
+      apiKey: 'demo-key',
+      appId: '1:000000000000:web:0000000000000000',
+      messagingSenderId: '000000000000',
+      projectId: _projectId,
+      storageBucket: '$_projectId.appspot.com',
+    ),
   );
 
   final firestore = FirebaseFirestore.instance;
@@ -198,17 +205,3 @@ Future<Map<String, dynamic>?> readDocument(String path) async {
   return doc.data();
 }
 
-/// Extension to copy FirebaseOptions with overridden fields.
-extension FirebaseOptionsCopy on FirebaseOptions {
-  FirebaseOptions copyWith({String? projectId}) {
-    return FirebaseOptions(
-      apiKey: apiKey,
-      appId: appId,
-      messagingSenderId: messagingSenderId,
-      projectId: projectId ?? this.projectId,
-      authDomain: authDomain,
-      storageBucket: storageBucket,
-      measurementId: measurementId,
-    );
-  }
-}
