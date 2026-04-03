@@ -1,6 +1,11 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../main.dart' show firebaseInitializedProvider;
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
@@ -50,6 +55,41 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     });
   }
 
+  Future<void> signInWithApple() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      // Generate a nonce for security
+      final rawNonce = _generateNonce();
+      final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final userCredential = await ref
+          .read(firebaseAuthProvider)
+          .signInWithCredential(oauthCredential);
+
+      // Apple only sends the name on first sign-in, so persist it
+      if (appleCredential.givenName != null &&
+          userCredential.user?.displayName == null) {
+        final displayName =
+            '${appleCredential.givenName} ${appleCredential.familyName ?? ''}'
+                .trim();
+        await userCredential.user?.updateDisplayName(displayName);
+      }
+    });
+  }
+
   Future<void> signInAnonymously() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -63,4 +103,12 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
       await ref.read(firebaseAuthProvider).signOut();
     });
   }
+}
+
+String _generateNonce([int length = 32]) {
+  const charset =
+      '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+  final random = Random.secure();
+  return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+      .join();
 }

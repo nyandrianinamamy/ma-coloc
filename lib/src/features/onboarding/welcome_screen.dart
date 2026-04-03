@@ -36,13 +36,20 @@ class WelcomeScreen extends ConsumerWidget {
               const Expanded(child: _LogoSection()),
 
               // Bottom buttons
+              _AppleButton(
+                isLoading: authState.isLoading,
+                onTap: () {
+                  ref.read(authNotifierProvider.notifier).signInWithApple();
+                },
+              ),
+              const SizedBox(height: 12),
               _GoogleButton(
                 isLoading: authState.isLoading,
                 onTap: () {
                   ref.read(authNotifierProvider.notifier).signInWithGoogle();
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _EmailButton(
                 onTap: () => context.go('/sign-in'),
               ),
@@ -196,6 +203,64 @@ class _LogoSectionState extends State<_LogoSection>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Apple sign-in button
+// ---------------------------------------------------------------------------
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.isLoading, required this.onTap});
+
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              )
+            else ...[
+              const Icon(Icons.apple, size: 24, color: Colors.white),
+              const SizedBox(width: 10),
+              Text(
+                'Continue with Apple',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

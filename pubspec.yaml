@@ -55,6 +55,8 @@ dependencies:
   firebase_messaging: ^15.2.4
   share_plus: ^10.1.4
   google_sign_in: ^7.2.0
+  sign_in_with_apple: ^7.0.1
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:
