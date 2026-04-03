@@ -397,6 +397,39 @@ class _LiveSettingsScreenState extends ConsumerState<_LiveSettingsScreen> {
                   ],
                   const SizedBox(height: 28),
                   _DangerZone(
+                    isDemo: ref.watch(currentHouseProvider).valueOrNull?.isDemo ?? false,
+                    onExitDemo: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Exit Demo'),
+                          content: const Text(
+                              'This will delete the demo data and sign you out.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Exit Demo'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true && context.mounted) {
+                        final houseId =
+                            ref.read(currentHouseIdProvider).valueOrNull;
+                        if (houseId != null) {
+                          await ref
+                              .read(houseActionsProvider.notifier)
+                              .cleanupDemoHouse(houseId);
+                        }
+                        await ref
+                            .read(authNotifierProvider.notifier)
+                            .signOut();
+                      }
+                    },
                     onLeave: _leaveHouse,
                     onSignOut: () async {
                       final confirmed = await showDialog<bool>(
@@ -1365,15 +1398,52 @@ class _MockMemberRow extends StatelessWidget {
 // ─── Danger Zone ─────────────────────────────────────────────────────────────
 
 class _DangerZone extends StatelessWidget {
-  const _DangerZone({required this.onLeave, required this.onSignOut});
+  const _DangerZone({
+    required this.onLeave,
+    required this.onSignOut,
+    this.isDemo = false,
+    this.onExitDemo,
+  });
 
   final VoidCallback onLeave;
   final VoidCallback onSignOut;
+  final bool isDemo;
+  final VoidCallback? onExitDemo;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        if (isDemo && onExitDemo != null) ...[
+          GestureDetector(
+            onTap: onExitDemo,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.explore_off_rounded, size: 20, color: Color(0xFFB45309)),
+                  SizedBox(width: 10),
+                  Text(
+                    'Exit Demo',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFB45309),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         GestureDetector(
           onTap: onLeave,
           child: Container(
@@ -1384,9 +1454,9 @@ class _DangerZone extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.rose100),
             ),
-            child: Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Icon(
                   Icons.logout_rounded,
                   size: 20,
@@ -1416,9 +1486,9 @@ class _DangerZone extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.slate200),
             ),
-            child: Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Icon(
                   Icons.power_settings_new_rounded,
                   size: 20,
