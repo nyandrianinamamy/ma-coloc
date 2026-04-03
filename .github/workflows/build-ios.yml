@@ -34,9 +34,6 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "number=${TAG#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build Flutter iOS (release, no-codesign)
-        run: flutter build ios --release --no-codesign --build-name=${{ steps.version.outputs.number }}
-
       - name: Setup Ruby and Fastlane
         uses: ruby/setup-ruby@v1
         with:
@@ -65,6 +62,7 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          BUILD_VERSION: ${{ steps.version.outputs.number }}
         run: bundle exec fastlane beta
 
       - name: Create GitHub Release
