@@ -39,8 +39,7 @@ firebase emulators:start --project demo-macoloc --config firebase.e2e.json \
 
 for i in $(seq 1 30); do
   if curl -fsS http://127.0.0.1:9099/ >/dev/null 2>&1 && \
-     curl -fsS http://127.0.0.1:8080/ >/dev/null 2>&1 && \
-     curl -fsS http://127.0.0.1:5001/ >/dev/null 2>&1; then
+     curl -fsS http://127.0.0.1:8080/ >/dev/null 2>&1; then
     echo "Firebase emulators ready"
     break
   fi
