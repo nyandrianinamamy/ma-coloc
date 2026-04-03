@@ -30,6 +30,7 @@ class House with _$House {
     String? lastResetDate,
     String? lastDeepCleanMonth,
     @Default(HouseSettings()) HouseSettings settings,
+    @Default(false) bool isDemo,
   }) = _House;
 
   factory House.fromJson(Map<String, dynamic> json) => _$HouseFromJson(json);

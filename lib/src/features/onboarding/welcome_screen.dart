@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../providers/house_provider.dart';
 import '../../theme/app_logo.dart';
 import '../../theme/app_theme.dart';
 
@@ -35,15 +36,42 @@ class WelcomeScreen extends ConsumerWidget {
               const Expanded(child: _LogoSection()),
 
               // Bottom buttons
+              _AppleButton(
+                isLoading: authState.isLoading,
+                onTap: () {
+                  ref.read(authNotifierProvider.notifier).signInWithApple();
+                },
+              ),
+              const SizedBox(height: 12),
               _GoogleButton(
                 isLoading: authState.isLoading,
                 onTap: () {
                   ref.read(authNotifierProvider.notifier).signInWithGoogle();
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _EmailButton(
                 onTap: () => context.go('/sign-in'),
+              ),
+              const SizedBox(height: 16),
+              _DemoButton(
+                onTap: () async {
+                  try {
+                    final cred =
+                        await ref.read(firebaseAuthProvider).signInAnonymously();
+                    // Ensure the ID token is ready before calling Cloud Functions
+                    await cred.user?.getIdToken();
+                    await ref
+                        .read(houseActionsProvider.notifier)
+                        .seedDemoHouse();
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
+                  }
+                },
               ),
               const SizedBox(height: 32),
             ],
@@ -181,6 +209,64 @@ class _LogoSectionState extends State<_LogoSection>
 }
 
 // ---------------------------------------------------------------------------
+// Apple sign-in button
+// ---------------------------------------------------------------------------
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.isLoading, required this.onTap});
+
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              )
+            else ...[
+              const Icon(Icons.apple, size: 24, color: Colors.white),
+              const SizedBox(width: 10),
+              Text(
+                'Continue with Apple',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Google sign-in button
 // ---------------------------------------------------------------------------
 class _GoogleButton extends StatelessWidget {
@@ -279,6 +365,63 @@ class _EmailButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Demo explore button
+// ---------------------------------------------------------------------------
+class _DemoButton extends StatefulWidget {
+  const _DemoButton({required this.onTap});
+
+  final Future<void> Function() onTap;
+
+  @override
+  State<_DemoButton> createState() => _DemoButtonState();
+}
+
+class _DemoButtonState extends State<_DemoButton> {
+  bool _isLoading = false;
+
+  Future<void> _handleTap() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await widget.onTap();
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: Container(
+        width: double.infinity,
+        height: 48,
+        alignment: Alignment.center,
+        child: _isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation(AppColors.slate400),
+                ),
+              )
+            : Text(
+                'Explore with demo data',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate500,
+                  decoration: TextDecoration.underline,
+                  decorationColor: AppColors.slate300,
+                ),
+              ),
       ),
     );
   }

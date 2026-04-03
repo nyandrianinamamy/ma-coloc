@@ -22,6 +22,7 @@ _$HouseImpl _$$HouseImplFromJson(Map<String, dynamic> json) => _$HouseImpl(
   settings: json['settings'] == null
       ? const HouseSettings()
       : HouseSettings.fromJson(json['settings'] as Map<String, dynamic>),
+  isDemo: json['isDemo'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$$HouseImplToJson(_$HouseImpl instance) =>
@@ -37,4 +38,5 @@ Map<String, dynamic> _$$HouseImplToJson(_$HouseImpl instance) =>
       'lastResetDate': instance.lastResetDate,
       'lastDeepCleanMonth': instance.lastDeepCleanMonth,
       'settings': instance.settings.toJson(),
+      'isDemo': instance.isDemo,
     };
