@@ -51,7 +51,10 @@ class WelcomeScreen extends ConsumerWidget {
                 isLoading: authState.isLoading,
                 onTap: () async {
                   try {
-                    await ref.read(firebaseAuthProvider).signInAnonymously();
+                    final cred =
+                        await ref.read(firebaseAuthProvider).signInAnonymously();
+                    // Ensure the ID token is ready before calling Cloud Functions
+                    await cred.user?.getIdToken();
                     await ref
                         .read(houseActionsProvider.notifier)
                         .seedDemoHouse();
