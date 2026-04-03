@@ -50,10 +50,18 @@ class WelcomeScreen extends ConsumerWidget {
               _DemoButton(
                 isLoading: authState.isLoading,
                 onTap: () async {
-                  final auth = ref.read(authNotifierProvider.notifier);
-                  final houseActions = ref.read(houseActionsProvider.notifier);
-                  await auth.signInAnonymously();
-                  await houseActions.seedDemoHouse();
+                  try {
+                    await ref.read(firebaseAuthProvider).signInAnonymously();
+                    await ref
+                        .read(houseActionsProvider.notifier)
+                        .seedDemoHouse();
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
+                  }
                 },
               ),
               const SizedBox(height: 32),
