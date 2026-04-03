@@ -39,14 +39,20 @@ export const cleanupDemoHouse = onCall({ invoker: "public" }, async (request) =>
     await batch.commit();
   }
 
-  // Delete house doc
+  // Delete house doc and sentinel
   await db.collection("houses").doc(houseId).delete();
+  await db.collection("_demoLocks").doc(uid).delete();
 
-  // Delete anonymous auth account
+  // Only delete the auth account if it's anonymous
   try {
-    await getAuth().deleteUser(uid);
+    const userRecord = await getAuth().getUser(uid);
+    const isAnonymous =
+      userRecord.providerData.length === 0 && !userRecord.email;
+    if (isAnonymous) {
+      await getAuth().deleteUser(uid);
+    }
   } catch {
-    // User may already be deleted or not anonymous — ignore
+    // User may already be deleted — ignore
   }
 
   return { success: true };

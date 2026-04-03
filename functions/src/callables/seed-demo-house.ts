@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { generateInviteCode } from "../utils/invite-code";
 
 export const seedDemoHouse = onCall({ invoker: "public" }, async (request) => {
   if (!request.auth) {
@@ -9,20 +10,64 @@ export const seedDemoHouse = onCall({ invoker: "public" }, async (request) => {
   const db = getFirestore();
   const uid = request.auth.uid;
 
-  // If user already has a house, return it
-  const existing = await db
-    .collection("houses")
-    .where("members", "array-contains", uid)
-    .limit(1)
-    .get();
-  if (!existing.empty) {
-    return { houseId: existing.docs[0].id };
-  }
+  // Use a transaction to atomically check for existing house and create the
+  // house doc. This prevents double-tap races from creating duplicate houses.
+  // We use a sentinel doc keyed by uid so the transaction has a consistent read.
+  const sentinelRef = db.collection("_demoLocks").doc(uid);
 
+  const houseId = await db.runTransaction(async (tx) => {
+    // Check if user already has a house
+    const existing = await tx.get(
+      db.collection("houses")
+        .where("members", "array-contains", uid)
+        .limit(1)
+    );
+    if (!existing.empty) {
+      return existing.docs[0].id;
+    }
+
+    // Check sentinel to prevent concurrent creation
+    const sentinel = await tx.get(sentinelRef);
+    if (sentinel.exists) {
+      // Another call is creating — return its houseId
+      return sentinel.data()!.houseId as string;
+    }
+
+    const now = Timestamp.now();
+    const houseRef = db.collection("houses").doc();
+    const newHouseId = houseRef.id;
+    const rooms = ["Kitchen", "Living Room", "Bathroom", "Hallway", "Bedroom"];
+    const inviteCode = generateInviteCode();
+
+    // Write sentinel
+    tx.set(sentinelRef, { houseId: newHouseId, createdAt: now });
+
+    // Create house doc
+    tx.set(houseRef, {
+      name: "Appart Rue Exemple",
+      createdBy: uid,
+      createdAt: now,
+      inviteCode,
+      members: [uid, "demo-alex", "demo-sam", "demo-jordan"],
+      rooms,
+      timezone: "Europe/Paris",
+      lastResetDate: null,
+      lastDeepCleanMonth: null,
+      isDemo: true,
+      settings: {
+        deepCleanDay: 1,
+        volunteerWindowHours: 48,
+        disputeWindowHours: 48,
+      },
+    });
+
+    return newHouseId;
+  });
+
+  // Seed subcollections outside the transaction (batch write).
+  // If these already exist (retry), Firestore set() is idempotent.
+  const houseRef = db.collection("houses").doc(houseId);
   const now = Timestamp.now();
-  const houseRef = db.collection("houses").doc();
-  const houseId = houseRef.id;
-  const rooms = ["Kitchen", "Living Room", "Bathroom", "Hallway", "Bedroom"];
 
   const demoMembers = [
     { id: "demo-alex", name: "Alex M.", points: 145, resolved: 12, created: 8, streak: 7, longest: 14, badges: ["first_issue", "ten_resolved", "streak_7"], deepClean: 3 },
@@ -31,25 +76,6 @@ export const seedDemoHouse = onCall({ invoker: "public" }, async (request) => {
   ];
 
   const batch = db.batch();
-
-  // House doc
-  batch.set(houseRef, {
-    name: "Appart Rue Exemple",
-    createdBy: uid,
-    createdAt: now,
-    inviteCode: "DEMO01",
-    members: [uid, ...demoMembers.map((m) => m.id)],
-    rooms,
-    timezone: "Europe/Paris",
-    lastResetDate: null,
-    lastDeepCleanMonth: null,
-    isDemo: true,
-    settings: {
-      deepCleanDay: 1,
-      volunteerWindowHours: 48,
-      disputeWindowHours: 48,
-    },
-  });
 
   // Caller member doc
   batch.set(houseRef.collection("members").doc(uid), {
@@ -182,6 +208,9 @@ export const seedDemoHouse = onCall({ invoker: "public" }, async (request) => {
   }
 
   await batch.commit();
+
+  // Clean up sentinel
+  await sentinelRef.delete();
 
   return { houseId };
 });
