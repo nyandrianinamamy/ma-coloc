@@ -62,6 +62,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isLoggedIn && houseIdAsync.valueOrNull == null && !isOnOnboarding) {
         return '/onboarding';
       }
+      // Logged in, has house, still on onboarding -> home
+      if (isLoggedIn && houseIdAsync.valueOrNull != null && isOnOnboarding) {
+        return '/home';
+      }
 
       return null;
     },
