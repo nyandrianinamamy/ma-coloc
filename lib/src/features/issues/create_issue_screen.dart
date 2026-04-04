@@ -295,26 +295,6 @@ class _CameraView extends StatelessWidget {
                       ),
                     ),
 
-                    // Ghost toggle button
-                    GestureDetector(
-                      onTap: () {},
-                      child: Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.bedtime_outlined,
-                          color: Colors.white.withValues(alpha: 0.9),
-                          size: 24,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),

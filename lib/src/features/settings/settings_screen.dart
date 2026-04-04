@@ -948,61 +948,6 @@ class _MockHouseInfoCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Copy button
-                  GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.slate200),
-                      ),
-                      child: const Icon(
-                        Icons.copy_rounded,
-                        size: 20,
-                        color: AppColors.slate500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Share button
-                  GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.emerald,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(
-                            Icons.share_rounded,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Share',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
