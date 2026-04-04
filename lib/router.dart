@@ -44,8 +44,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       final user = authState.valueOrNull;
-      final isLoggedIn = user != null;
-      final isAnonymous = user?.isAnonymous ?? false;
+      final isAnonymousWithoutHouse =
+          (user?.isAnonymous ?? false) && houseIdAsync.valueOrNull == null;
+      // Treat anonymous users with no house as unauthenticated — their demo
+      // house no longer exists (stale session) so they must restart from welcome.
+      final isLoggedIn = user != null && !isAnonymousWithoutHouse;
       final isOnAuthPage = state.matchedLocation == '/sign-in' ||
           state.matchedLocation == '/welcome';
       final isOnOnboarding = state.matchedLocation.startsWith('/onboarding');
@@ -53,11 +56,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // While auth or house query is loading, stay put (show splash/loading)
       if (isLoading) return null;
-
-      // Anonymous user with no house: stale demo session — treat as logged out
-      if (isAnonymous && houseIdAsync.valueOrNull == null && !isOnAuthPage) {
-        return '/welcome';
-      }
 
       // Not logged in -> welcome
       if (!isLoggedIn && !isOnAuthPage) return '/welcome';
