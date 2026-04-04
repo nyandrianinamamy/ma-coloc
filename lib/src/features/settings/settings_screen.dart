@@ -428,16 +428,18 @@ class _LiveSettingsScreenState extends ConsumerState<_LiveSettingsScreen> {
                             ),
                           ),
                         );
+                        // Capture refs before any await — the widget may be
+                        // disposed mid-flight when the router redirects.
                         final houseId =
                             ref.read(currentHouseIdProvider).valueOrNull;
+                        final houseActions =
+                            ref.read(houseActionsProvider.notifier);
+                        final authNotifier =
+                            ref.read(authNotifierProvider.notifier);
                         if (houseId != null) {
-                          await ref
-                              .read(houseActionsProvider.notifier)
-                              .cleanupDemoHouse(houseId);
+                          await houseActions.cleanupDemoHouse(houseId);
                         }
-                        await ref
-                            .read(authNotifierProvider.notifier)
-                            .signOut();
+                        await authNotifier.signOut();
                       }
                     },
                     onLeave: _leaveHouse,
