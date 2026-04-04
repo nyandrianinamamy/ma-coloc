@@ -418,6 +418,16 @@ class _LiveSettingsScreenState extends ConsumerState<_LiveSettingsScreen> {
                         ),
                       );
                       if (confirmed == true && context.mounted) {
+                        showDialog<void>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => const PopScope(
+                            canPop: false,
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        );
                         final houseId =
                             ref.read(currentHouseIdProvider).valueOrNull;
                         if (houseId != null) {
