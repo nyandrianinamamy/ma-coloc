@@ -107,12 +107,14 @@ class HouseActions extends Notifier<AsyncValue<void>> {
   }
 
   Future<void> cleanupDemoHouse(String houseId) async {
+    // Invalidate before calling the function so the Firestore stream stops
+    // listening to the house document. The Cloud Function deletes the auth
+    // account, which would otherwise cause a permission-denied error on the
+    // active stream. The router handles anonymous+no-house → /welcome now.
+    ref.invalidate(currentHouseIdProvider);
     final functions = ref.read(firebaseFunctionsProvider);
     await functions
         .httpsCallable('cleanupDemoHouse')
         .call({'houseId': houseId});
-    // Do NOT invalidate currentHouseIdProvider here — signOut() (called next)
-    // will cause it to return null naturally via auth state. Invalidating early
-    // would make the router briefly redirect to /onboarding before sign-out.
   }
 }
