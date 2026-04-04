@@ -111,6 +111,8 @@ class HouseActions extends Notifier<AsyncValue<void>> {
     await functions
         .httpsCallable('cleanupDemoHouse')
         .call({'houseId': houseId});
-    ref.invalidate(currentHouseIdProvider);
+    // Do NOT invalidate currentHouseIdProvider here — signOut() (called next)
+    // will cause it to return null naturally via auth state. Invalidating early
+    // would make the router briefly redirect to /onboarding before sign-out.
   }
 }
