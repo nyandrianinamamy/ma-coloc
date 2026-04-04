@@ -54,10 +54,12 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.53644947761-jihucdc6qfg60g2vvuj5vp18e4haab89</string>
+				<string>com.googleusercontent.apps.53644947761-f3h42101nhfmmns2non20c5m1vb2e0f2</string>
 			</array>
 		</dict>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>

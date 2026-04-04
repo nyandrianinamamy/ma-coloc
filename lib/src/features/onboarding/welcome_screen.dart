@@ -64,6 +64,9 @@ class WelcomeScreen extends ConsumerWidget {
                     await ref
                         .read(houseActionsProvider.notifier)
                         .seedDemoHouse();
+                    // Navigate directly to home — the house now exists so the
+                    // router will stay there once the houseId query resolves.
+                    if (context.mounted) context.go('/home');
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(

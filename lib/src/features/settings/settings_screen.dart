@@ -418,16 +418,28 @@ class _LiveSettingsScreenState extends ConsumerState<_LiveSettingsScreen> {
                         ),
                       );
                       if (confirmed == true && context.mounted) {
+                        showDialog<void>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => const PopScope(
+                            canPop: false,
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        );
+                        // Capture refs before any await — the widget may be
+                        // disposed mid-flight when the router redirects.
                         final houseId =
                             ref.read(currentHouseIdProvider).valueOrNull;
+                        final houseActions =
+                            ref.read(houseActionsProvider.notifier);
+                        final authNotifier =
+                            ref.read(authNotifierProvider.notifier);
                         if (houseId != null) {
-                          await ref
-                              .read(houseActionsProvider.notifier)
-                              .cleanupDemoHouse(houseId);
+                          await houseActions.cleanupDemoHouse(houseId);
                         }
-                        await ref
-                            .read(authNotifierProvider.notifier)
-                            .signOut();
+                        await authNotifier.signOut();
                       }
                     },
                     onLeave: _leaveHouse,
@@ -936,61 +948,6 @@ class _MockHouseInfoCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Copy button
-                  GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.slate200),
-                      ),
-                      child: const Icon(
-                        Icons.copy_rounded,
-                        size: 20,
-                        color: AppColors.slate500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Share button
-                  GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.emerald,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(
-                            Icons.share_rounded,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Share',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
