@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -125,7 +126,7 @@ class _CreateIssueScreenState extends ConsumerState<CreateIssueScreen> {
 // Phase 1 — Camera View
 // ---------------------------------------------------------------------------
 
-class _CameraView extends StatelessWidget {
+class _CameraView extends StatefulWidget {
   const _CameraView({
     super.key,
     required this.onClose,
@@ -135,28 +136,114 @@ class _CameraView extends StatelessWidget {
   final VoidCallback onClose;
   final ValueChanged<XFile> onPhotoPicked;
 
-  Future<void> _pickImage(ImageSource source, BuildContext context) async {
+  @override
+  State<_CameraView> createState() => _CameraViewState();
+}
+
+class _CameraViewState extends State<_CameraView> with WidgetsBindingObserver {
+  CameraController? _controller;
+  String? _error;
+  bool _capturing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initCamera();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final ctrl = _controller;
+    if (ctrl == null || !ctrl.value.isInitialized) return;
+
+    if (state == AppLifecycleState.inactive) {
+      ctrl.dispose();
+      _controller = null;
+    } else if (state == AppLifecycleState.resumed) {
+      _initCamera();
+    }
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        if (mounted) setState(() => _error = 'No camera available on this device.');
+        return;
+      }
+      final back = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(
+        back,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+      await controller.initialize();
+      if (!mounted) {
+        controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+        _error = null;
+      });
+    } catch (e) {
+      debugPrint('Camera init error: $e');
+      if (mounted) {
+        final isPermission = e.toString().contains('CameraAccessDenied');
+        setState(() {
+          _error = isPermission
+              ? 'Camera access denied. Please allow camera access in Settings.'
+              : 'Could not start camera.';
+        });
+      }
+    }
+  }
+
+  Future<void> _capture() async {
+    final ctrl = _controller;
+    if (ctrl == null || !ctrl.value.isInitialized || _capturing) return;
+    _capturing = true;
+    try {
+      final file = await ctrl.takePicture();
+      widget.onPhotoPicked(file);
+    } catch (e) {
+      debugPrint('Capture error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to capture photo. Please try again.')),
+        );
+      }
+    } finally {
+      _capturing = false;
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
     try {
       final photo = await ImagePicker().pickImage(
-        source: source,
+        source: ImageSource.gallery,
         maxWidth: 1024,
         imageQuality: 85,
       );
       if (photo != null) {
-        onPhotoPicked(photo);
+        widget.onPhotoPicked(photo);
       }
     } catch (e) {
-      if (context.mounted) {
-        final isPermission = e.toString().contains('photo_access_denied') ||
-            e.toString().contains('camera_access_denied');
-        final message = isPermission
-            ? (source == ImageSource.camera
-                ? 'Camera access denied. Please allow camera access in Settings.'
-                : 'Photo library access denied. Please allow access in Settings.')
-            : 'Could not open ${source == ImageSource.camera ? 'camera' : 'photo library'}. Please try again.';
-        debugPrint('ImagePicker error: $e');
+      debugPrint('Gallery picker error: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
+          const SnackBar(content: Text('Could not open photo library.')),
         );
       }
     }
@@ -166,49 +253,69 @@ class _CameraView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Dark background while camera picker is open
-            Positioned.fill(
-              child: Container(color: const Color(0xFF0A0A0A)),
-            ),
-
-            // Center instruction
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.camera_alt_outlined,
-                    color: Colors.white.withValues(alpha: 0.5),
-                    size: 48,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Take a photo of the issue',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+      body: Stack(
+        children: [
+          // Camera preview or error
+          Positioned.fill(
+            child: _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
+                  )
+                : _controller != null && _controller!.value.isInitialized
+                    ? CameraPreview(_controller!)
+                    : const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+          ),
+
+          // Instruction label
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 72,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Point at the issue and snap a photo',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
+                ),
               ),
             ),
+          ),
 
-            // Top bar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
+          // Top bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: onClose,
+                      onTap: widget.onClose,
                       child: Container(
                         width: 40,
                         height: 40,
@@ -239,12 +346,15 @@ class _CameraView extends StatelessWidget {
                 ),
               ),
             ),
+          ),
 
-            // Bottom controls
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
+          // Bottom controls
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(40, 20, 40, 32),
                 child: Row(
@@ -253,7 +363,7 @@ class _CameraView extends StatelessWidget {
                   children: [
                     // Gallery button
                     GestureDetector(
-                      onTap: () => _pickImage(ImageSource.gallery, context),
+                      onTap: _pickFromGallery,
                       child: Container(
                         width: 52,
                         height: 52,
@@ -274,7 +384,7 @@ class _CameraView extends StatelessWidget {
 
                     // Capture button
                     GestureDetector(
-                      onTap: () => _pickImage(ImageSource.camera, context),
+                      onTap: _capture,
                       child: Container(
                         width: 80,
                         height: 80,
@@ -295,12 +405,14 @@ class _CameraView extends StatelessWidget {
                       ),
                     ),
 
+                    // Spacer to balance the row
+                    const SizedBox(width: 52),
                   ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
